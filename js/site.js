@@ -26,10 +26,16 @@
   }
 
   function sanitizeStorageFilename(name) {
-    // Replace characters that could cause issues in storage paths
-    return String(name)
-      .replace(/[^\w.\-]/g, "_")
-      .slice(0, 200) || "file";
+    // Allow alphanumerics, hyphens, and underscores only (no dots to avoid path traversal).
+    // Preserve a synthetic extension by replacing the last dot with an underscore first.
+    var s = String(name);
+    var lastDot = s.lastIndexOf(".");
+    var base = lastDot > 0 ? s.slice(0, lastDot) : s;
+    var ext = lastDot > 0 ? s.slice(lastDot + 1) : "";
+    var safeBase = base.replace(/[^\w\-]/g, "_");
+    var safeExt = ext.replace(/[^\w]/g, "_").slice(0, 10);
+    var result = safeExt ? safeBase + "_" + safeExt : safeBase;
+    return result.slice(0, 200) || "file";
   }
 
   function uploadFileToStorage(file, pendingId, supabaseUrl, anonKey) {
@@ -545,7 +551,7 @@
           window.location.href = QUOTE_PREVIEW_PAGE;
         })
         .catch(function (err) {
-          // Upload failed — proceed without paths, showing a warning
+          // Upload failed — re-enable form so the user can retry or proceed without files
           console.warn("File upload warning:", err);
           try {
             sessionStorage.setItem(QUOTE_DRAFT_STORAGE_KEY, JSON.stringify(draft));
@@ -557,11 +563,24 @@
           }
           if (statusEl) {
             statusEl.textContent =
-              "File upload failed — you can still submit your details without attachments, or try again.";
+              "File upload failed. Fix and try again, or remove the files and continue.";
           }
-          // Ask user if they want to continue without uploads
-          if (window.confirm("File upload failed. Continue without uploading files?")) {
-            window.location.href = QUOTE_PREVIEW_PAGE;
+          // Show an inline "Continue without files" link instead of a browser dialog
+          var dropzone = document.getElementById("q-dropzone");
+          if (dropzone && !dropzone.querySelector(".upload-retry-notice")) {
+            var notice = document.createElement("p");
+            notice.className = "form-note upload-retry-notice";
+            notice.innerHTML =
+              'Upload error. ' +
+              '<button type="button" class="btn btn-secondary" style="font-size:0.85rem;padding:0.25rem 0.75rem;" ' +
+              'id="q-continue-without-files">Continue without files →</button>';
+            dropzone.appendChild(notice);
+            var contBtn = document.getElementById("q-continue-without-files");
+            if (contBtn) {
+              contBtn.addEventListener("click", function () {
+                window.location.href = QUOTE_PREVIEW_PAGE;
+              });
+            }
           }
         });
     });

@@ -143,10 +143,13 @@ async function runAiSummary(
     | { type: "image_url"; image_url: { url: string; detail: "low" | "high" | "auto" } };
 
   const userContent: ContentPart[] = [{ type: "text", text: projectText }];
-  for (const url of imageUrls) {
+  for (let i = 0; i < imageUrls.length; i++) {
+    // Use high detail for the first 2 images (better site analysis) and
+    // low for the rest to keep token cost reasonable.
+    const detail: "low" | "high" = i < 2 ? "high" : "low";
     userContent.push({
       type: "image_url",
-      image_url: { url, detail: "low" },
+      image_url: { url: imageUrls[i], detail },
     });
   }
 
@@ -417,7 +420,8 @@ Deno.serve(async (req) => {
     }
   }
 
-  // Send notification email (non-blocking, optional)
+  // Send notification email (fire-and-forget — errors are logged but never
+  // propagated so a transient email failure does not fail the submission).
   sendNotificationEmail({
     customer_name,
     customer_email,
