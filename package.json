@@ -1,0 +1,33 @@
+{
+  "name": "apex-ground-works",
+  "version": "1.0.0",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "supabase": "supabase",
+    "db:link": "supabase link",
+    "db:push": "supabase db push",
+    "db:status": "supabase migration list",
+    "functions:serve": "supabase functions serve submit-smart-quote",
+    "functions:deploy": "supabase functions deploy submit-smart-quote",
+    "deploy:function": "node scripts/deploy-submit-smart-quote.mjs",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arnisplum/apex-ground-works.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/arnisplum/apex-ground-works/issues"
+  },
+  "homepage": "https://github.com/arnisplum/apex-ground-works#readme",
+  "description": "",
+  "devDependencies": {
+    "supabase": "^2.91.2"
+  }
+}

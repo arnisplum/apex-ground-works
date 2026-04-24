@@ -1,0 +1,89 @@
+---
+description: >-
+  Apex Ground Works unified design system — warm residential brand; match Smart
+  Quote + homepage; use css/styles.css tokens, no SaaS/template drift.
+alwaysApply: true
+---
+
+# Apex Ground Works — design system
+
+Use for every new page, section, card, form, modal, gallery item, CTA, and component. **Nothing should look like a different website.**
+
+## Source of truth (code)
+
+- **Tokens and components:** `css/styles.css` — `:root` CSS variables (`--color-*`, `--radius-*`, `--shadow-*`) and existing classes (`.section`, `.card`, `.btn`, `.input`, `.textarea`, `.eyebrow`, `.form-stack`, etc.).
+- **Visual baseline:** `quote.html` (Smart Quote) and `index.html` (homepage). New UI must sit beside these without palette, radius, or spacing drift.
+- **Do not** parallel a second color system or one-off hex soup on new pages. Extend `:root` if a new token is truly needed.
+
+## Brand feel
+
+Warm, calm, residential-friendly, clean, premium but approachable, minimal, soft, trustworthy — homeowner service brand.
+
+**Avoid:** cold / high-tech / corporate / flashy / crowded / overdesigned / SaaS / admin dashboard / generic template.
+
+## Color (aligned to implementation)
+
+**Backgrounds (warm light neutrals):** `--color-page` `#f7f4ee`, `--color-page-warm` `#f8f5ee`, `--color-elevated` `#fcfbf8`, `--color-elevated-soft` `#faf8f2`, `--color-card` `#fcfbf8`. Optional reserved tones for panels/maps (add as variables if used): `#f6f2ea`, `#efe8d9`, `#e6dcc9`. No cold gray, blue-tinted neutrals, or stark white-only UI.
+
+**Text:** `--color-text-strong` `#1f1f1f`, `--color-text` `#2d2d2d` (primary body), `--color-text-secondary` `#5d584f`, `--color-text-muted` `#6d665a`, `--color-label` `#7c766a` (eyebrows / labels). Avoid harsh pure black except rare emphasis.
+
+**Accent:** `--color-accent` `#2f6f6a`, hover `--color-accent-hover` `#265a55`. Primary buttons, key highlights, checks, active states. Do not reintroduce bright blue as a main CTA accent.
+
+**Borders:** `--color-border` through `--color-border-warm` (`#e5dfd2` … `#d6cebf`). Darkest warm border if needed: `#cfc6b6` (prefer adding as a token if used widely). No sharp dark outlines.
+
+## Typography
+
+**Font:** `DM Sans` (already loaded). Tone: elegant, readable, human — not condensed, ultra-bold, or tiny.
+
+**Headings:** Short, confident (e.g. “Project details”, “Tell us about your project”). Avoid long marketing paragraphs as titles.
+
+**Body:** Short, breathable, useful; avoid huge text walls.
+
+**Eyebrows:** Small uppercase, letter-spaced, muted — match `.eyebrow` (e.g. QUOTE EXPERIENCE, STEP 1, SERVICES).
+
+## Radius, shadows, motion
+
+- **Radius:** `--radius-card` `26px` (large cards ~24–28px), `--radius-sm` `14px` (inputs ~12px class behavior), pills/small surfaces 12–16px, **buttons:** `--radius-btn` (pill / full round).
+- **Shadows:** only `--shadow-soft`, `--shadow-card`, `--shadow-hover` — warm, subtle. No harsh / neon / dramatic depth.
+- **Motion:** subtle hover, light fade, gentle transitions. No bounce, spin, or startup-hero excess.
+
+## Buttons
+
+- **Primary:** filled `--color-accent`, white text, pill radius, clear hover (darker accent).
+- **Secondary:** soft/white surface, warm border, dark text, pill.
+- **Hierarchy:** one primary and one secondary per decision area; not every control primary.
+
+## Cards, panels, forms
+
+Warm surface, soft border, rounded corners, simple internal spacing, no nested box clutter. Forms: match Smart Quote — soft field background, warm border, comfortable padding, clear labels (see `.input`, `.textarea`, `.field`).
+
+## Icons
+
+Sparingly; helpful; accent color where appropriate; consistent stroke. This repo uses **simple inline SVG** today — match that weight; if adding a library later, prefer Lucide with consistent stroke.
+
+## Layout & images
+
+Roomy section padding (`--section-y`, `--section-x`), calm gaps, whitespace. If a section feels dense, **reduce content** before adding chrome.
+
+Images: rounded, soft, editorial; no busy collage; lightbox okay if subtle.
+
+## Layout nuance
+
+Sticky header uses light **backdrop blur** on a warm translucent bar — that pattern is allowed; avoid heavy glassmorphism on cards or heroes.
+
+## Copy tone
+
+Clear, practical, trustworthy, homeowner-friendly, calm. No hype, startup jargon, or “AI-powered” unless factually required.
+
+## Before shipping new UI
+
+1. Does it sit beside Smart Quote / homepage without clashing?
+2. Colors only from `:root` (or new tokens added there)?
+3. Radii and spacing match existing rhythm?
+4. Warm residential feel preserved?
+5. CTA hierarchy obvious?
+6. Anything cold, busy, or sharp? If yes, simplify.
+
+## Do not add
+
+Random accent colors, bright blue CTA systems, neon, glass stacks on content, ultra-sharp corners everywhere, dashboard-style dense cards, unapproved full dark sections, crowded icon rows, overbuilt galleries, generic template chrome.

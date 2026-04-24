@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Apex Ground Works Smart Quote — review your project preview, then send your request by email."
+    />
+    <title>Project preview | Smart Quote | Apex Ground Works</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body
+    data-quote-submit-url="https://sdbedmwqhbntxhbxqwcb.supabase.co/functions/v1/submit-smart-quote"
+  >
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="logo" href="index.html" aria-label="Apex Ground Works — home">
+          <picture>
+            <source srcset="media/Logo/apex-logo.webp" type="image/webp" />
+            <img
+              src="media/Logo/apex-logo.jpg"
+              alt=""
+              width="400"
+              height="128"
+              decoding="async"
+            />
+          </picture>
+        </a>
+        <nav class="nav" aria-label="Primary">
+          <a href="index.html#services">Services</a>
+          <a href="index.html#trust">Trust</a>
+          <a href="index.html#projects">Projects</a>
+          <a href="quote.html">Smart quote</a>
+          <a href="index.html#contact">Contact</a>
+          <a class="btn btn-primary" href="quote.html#quote-form">Begin</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <header class="page-hero">
+        <div class="page-hero__inner">
+          <p class="eyebrow">Quote experience</p>
+          <h1>Project preview</h1>
+          <p class="lead">
+            Step 2 of the Smart Quote — when you are happy with the details, submit your
+            request and review the project summary.
+          </p>
+        </div>
+      </header>
+
+      <div class="quote-layout">
+        <div
+          class="card"
+          id="quote-preview"
+          data-mailto-to="quotes@apexgroundworks.com"
+          data-mailto-subject="Smart Quote — Apex Ground Works"
+        >
+          <div class="quote-card-header">
+            <div class="quote-card-header__titles">
+              <p class="eyebrow quote-card-header__step">Step 2</p>
+              <h2 class="quote-card-header__heading">AI project preview</h2>
+            </div>
+            <span class="quote-card-badge quote-card-badge--client">Client-facing</span>
+          </div>
+          <p class="quote-card-intro">
+            When Smart Quote is connected to your Apex backend, your project summary appears
+            below after you submit. You can still send a copy by email afterward if you like.
+          </p>
+
+          <p class="form-note quote-preview-warning" id="quote-preview-warning" hidden></p>
+
+          <div class="quote-preview-panel" aria-labelledby="quote-preview-panel-title">
+            <div class="quote-preview-panel__icon-wrap" aria-hidden="true">
+              <svg
+                class="quote-preview-panel__doc-icon"
+                width="36"
+                height="44"
+                viewBox="0 0 32 40"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fill="currentColor"
+                  d="M4 2h14l10 10v24a4 4 0 0 1-4 4H4V2zm4 4v28h20V16H14V6H8zm6 10h8v3h-8v-3zm0 7h8v3h-8v-3z"
+                />
+              </svg>
+            </div>
+            <h3 class="quote-preview-panel__title" id="quote-preview-panel-title">
+              Preview appears here
+            </h3>
+            <p class="quote-preview-panel__text" id="quote-preview-ai">
+              After you submit, a concise summary will appear here. If the backend URL is not
+              configured on this page yet, Submit uses your mail app instead.
+            </p>
+          </div>
+
+          <div class="quote-preview-actions">
+            <div class="quote-preview-actions__row">
+              <a class="btn btn-secondary quote-preview-actions__back" href="quote.html"
+                >Back to details</a
+              >
+              <button type="button" class="btn btn-primary quote-preview-actions__submit" id="quote-preview-submit">
+                Submit form
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary quote-preview-actions__submit"
+                id="quote-preview-email-copy"
+                hidden
+              >
+                Email a copy
+              </button>
+            </div>
+            <a class="quote-back-link" href="index.html">Back to home</a>
+          </div>
+
+          <p class="form-note quote-form-footnote">
+            Submit request saves your details with Apex. You can open an email copy afterward;
+            attach the same files again in your mail app if you included any on the previous
+            step.
+          </p>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        <strong>Apex Ground Works</strong> —
+        <a href="index.html">Home</a>
+        · <a href="quote.html">Smart Quote</a>
+        · Preview
+      </p>
+    </footer>
+
+    <script src="js/site.js" defer></script>
+  </body>
+</html>
