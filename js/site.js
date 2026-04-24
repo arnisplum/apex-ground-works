@@ -11,9 +11,83 @@
     return typeof u === "string" ? u.trim() : "";
   }
 
+  function getSupabaseConfig() {
+    var b = document.body;
+    if (!b) return { url: "", anonKey: "" };
+    var submitUrl = getQuoteSubmitUrl();
+    // Derive base URL from submit URL (strip path after the TLD)
+    var baseUrl = "";
+    if (submitUrl) {
+      var m = submitUrl.match(/^(https?:\/\/[^/]+)/);
+      if (m) baseUrl = m[1];
+    }
+    var anonKey = (b.getAttribute("data-supabase-anon-key") || "").trim();
+    return { url: baseUrl, anonKey: anonKey };
+  }
+
+  function sanitizeStorageFilename(name) {
+    // Allow alphanumerics, hyphens, and underscores only (no dots to avoid path traversal).
+    // Preserve a synthetic extension by replacing the last dot with an underscore first.
+    var s = String(name);
+    var lastDot = s.lastIndexOf(".");
+    var base = lastDot > 0 ? s.slice(0, lastDot) : s;
+    var ext = lastDot > 0 ? s.slice(lastDot + 1) : "";
+    var safeBase = base.replace(/[^\w\-]/g, "_");
+    var safeExt = ext.replace(/[^\w]/g, "_").slice(0, 10);
+    var result = safeExt ? safeBase + "_" + safeExt : safeBase;
+    return result.slice(0, 200) || "file";
+  }
+
+  function uploadFileToStorage(file, pendingId, supabaseUrl, anonKey) {
+    var safeName = sanitizeStorageFilename(file.name);
+    var storagePath = pendingId + "/" + safeName;
+    var uploadUrl = supabaseUrl + "/storage/v1/object/quote-attachments/" + storagePath;
+    return fetch(uploadUrl, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + anonKey,
+        "Content-Type": file.type || "application/octet-stream",
+        "x-upsert": "true",
+      },
+      body: file,
+    }).then(function (res) {
+      if (!res.ok) {
+        return res.text().then(function (t) {
+          throw new Error("Upload failed (" + res.status + "): " + file.name + " — " + t);
+        });
+      }
+      return storagePath;
+    });
+  }
+
+  function uploadFilesWithProgress(files, pendingId, supabaseUrl, anonKey, onProgress) {
+    var total = files.length;
+    var done = 0;
+    if (total === 0) return Promise.resolve([]);
+    var paths = new Array(total).fill(null);
+    var uploads = Array.from(files).map(function (file, idx) {
+      return uploadFileToStorage(file, pendingId, supabaseUrl, anonKey).then(function (path) {
+        paths[idx] = path;
+        done += 1;
+        if (onProgress) onProgress(done, total);
+        return path;
+      });
+    });
+    return Promise.all(uploads).then(function () {
+      return paths.filter(Boolean);
+    });
+  }
+
   function draftToSubmitPayload(draft) {
     if (!draft || typeof draft !== "object") return null;
     var attachments = Array.isArray(draft.attachments) ? draft.attachments : [];
+    var storagePaths = Array.isArray(draft.attachment_paths) ? draft.attachment_paths : [];
+    // Build manifest: merge filenames with storage paths when available
+    var manifest = attachments.map(function (name, idx) {
+      var entry = { name: String(name) };
+      if (storagePaths[idx]) entry.storage_path = String(storagePaths[idx]);
+      return entry;
+    });
     return {
       customer_name: String(draft.Name || "").trim(),
       customer_email: String(draft.Email || "").trim(),
@@ -22,9 +96,7 @@
       project_description: String(draft["Project description"] || "").trim(),
       project_type: String(draft["Project type"] || "").trim(),
       timing: String(draft["Timing"] || "").trim(),
-      attachment_manifest: attachments.map(function (name) {
-        return { name: String(name) };
-      }),
+      attachment_manifest: manifest,
     };
   }
 
@@ -421,11 +493,96 @@
         quoteStep1Form.reportValidity();
         return;
       }
+
+      var submitBtn = quoteStep1Form.querySelector(".quote-submit-btn");
+      var draft = formToQuoteDraft(quoteStep1Form);
+
+      // Collect File objects from the file input
+      var fileInputEl = quoteStep1Form.querySelector('input[type="file"]');
+      var files = fileInputEl && fileInputEl.files ? Array.from(fileInputEl.files) : [];
+
+      var cfg = getSupabaseConfig();
+      var canUpload = cfg.url && cfg.anonKey && files.length > 0;
+
+      if (!canUpload) {
+        // No upload configured or no files — proceed directly
+        try {
+          sessionStorage.setItem(QUOTE_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+        } catch (err) {}
+        window.location.href = QUOTE_PREVIEW_PAGE;
+        return;
+      }
+
+      // Generate a pending submission ID for the storage folder
+      var pendingId;
       try {
-        var draft = formToQuoteDraft(quoteStep1Form);
-        sessionStorage.setItem(QUOTE_DRAFT_STORAGE_KEY, JSON.stringify(draft));
-      } catch (err) {}
-      window.location.href = QUOTE_PREVIEW_PAGE;
+        pendingId = crypto.randomUUID();
+      } catch (err) {
+        pendingId = "pending-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+      }
+
+      // Show loading state on submit button
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.setAttribute("aria-busy", "true");
+        submitBtn.textContent = "Uploading files… 0/" + files.length;
+      }
+
+      var statusEl = document.getElementById("q-file-status");
+      if (statusEl) {
+        statusEl.textContent = "Uploading files… 0/" + files.length;
+      }
+
+      uploadFilesWithProgress(
+        files,
+        pendingId,
+        cfg.url,
+        cfg.anonKey,
+        function (done, total) {
+          if (submitBtn) submitBtn.textContent = "Uploading files… " + done + "/" + total;
+          if (statusEl) statusEl.textContent = "Uploading files… " + done + "/" + total;
+        }
+      )
+        .then(function (paths) {
+          draft.attachment_paths = paths;
+          try {
+            sessionStorage.setItem(QUOTE_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+          } catch (err) {}
+          window.location.href = QUOTE_PREVIEW_PAGE;
+        })
+        .catch(function (err) {
+          // Upload failed — re-enable form so the user can retry or proceed without files
+          console.warn("File upload warning:", err);
+          try {
+            sessionStorage.setItem(QUOTE_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+          } catch (err2) {}
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.removeAttribute("aria-busy");
+            submitBtn.textContent = "Generate project summary →";
+          }
+          if (statusEl) {
+            statusEl.textContent =
+              "File upload failed. Fix and try again, or remove the files and continue.";
+          }
+          // Show an inline "Continue without files" link instead of a browser dialog
+          var dropzone = document.getElementById("q-dropzone");
+          if (dropzone && !dropzone.querySelector(".upload-retry-notice")) {
+            var notice = document.createElement("p");
+            notice.className = "form-note upload-retry-notice";
+            notice.innerHTML =
+              'Upload error. ' +
+              '<button type="button" class="btn btn-secondary" style="font-size:0.85rem;padding:0.25rem 0.75rem;" ' +
+              'id="q-continue-without-files">Continue without files →</button>';
+            dropzone.appendChild(notice);
+            var contBtn = document.getElementById("q-continue-without-files");
+            if (contBtn) {
+              contBtn.addEventListener("click", function () {
+                window.location.href = QUOTE_PREVIEW_PAGE;
+              });
+            }
+          }
+        });
     });
   }
 
@@ -434,8 +591,55 @@
     var warnEl = document.getElementById("quote-preview-warning");
     var submitBtn = document.getElementById("quote-preview-submit");
     var emailCopyBtn = document.getElementById("quote-preview-email-copy");
+    var downloadBtn = document.getElementById("quote-preview-download");
+    var printBtn = document.getElementById("quote-preview-print");
     var draft = parseQuoteDraftFromStorage();
     var submitUrl = getQuoteSubmitUrl();
+
+    function buildSummaryText(result) {
+      var lines = [];
+      var d = parseQuoteDraftFromStorage() || {};
+      lines.push("Apex Ground Works — Smart Quote Summary");
+      lines.push("Generated: " + new Date().toLocaleDateString("en-CA", {
+        year: "numeric", month: "long", day: "numeric"
+      }));
+      lines.push("");
+      if (d.Name) lines.push("Name: " + d.Name);
+      if (d["Project address"]) lines.push("Address: " + d["Project address"]);
+      if (d.Email) lines.push("Email: " + d.Email);
+      if (d.Phone) lines.push("Phone: " + d.Phone);
+      if (d["Project type"]) lines.push("Project type: " + d["Project type"]);
+      if (d["Timing"]) lines.push("Timing: " + d["Timing"]);
+      lines.push("");
+      lines.push("Project description:");
+      lines.push(d["Project description"] || "");
+      if (result && result.ai_summary) {
+        lines.push("");
+        lines.push("AI Project Summary:");
+        lines.push(result.ai_summary);
+      }
+      var att = Array.isArray(d.attachments) ? d.attachments : [];
+      if (att.length) {
+        lines.push("");
+        lines.push("Attachments: " + att.join(", "));
+      }
+      return lines.join("\n");
+    }
+
+    function downloadSummaryAsText(result) {
+      var text = buildSummaryText(result);
+      var blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "apex-smart-quote-summary.txt";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () {
+        if (a.parentNode) a.parentNode.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 1000);
+    }
 
     function applyQuotePreviewSuccess(result) {
       if (submitBtn) submitBtn.removeAttribute("aria-busy");
@@ -450,7 +654,7 @@
       }
       if (introEl) {
         introEl.textContent =
-          "Review the summary below. Use “Email a copy” if you still want a mail draft with your details and attachment file names.";
+          "Review the AI summary below. Download or print a copy for your records.";
       }
       var foot = quotePreviewRoot.querySelector(".quote-form-footnote");
       if (foot) {
@@ -462,6 +666,18 @@
         submitBtn.disabled = true;
       }
       if (emailCopyBtn) emailCopyBtn.hidden = false;
+      if (downloadBtn) {
+        downloadBtn.hidden = false;
+        downloadBtn.addEventListener("click", function () {
+          downloadSummaryAsText(result);
+        });
+      }
+      if (printBtn) {
+        printBtn.hidden = false;
+        printBtn.addEventListener("click", function () {
+          window.print();
+        });
+      }
       if (warnEl) warnEl.hidden = true;
     }
 

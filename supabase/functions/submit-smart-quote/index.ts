@@ -1,6 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+type AttachmentEntry = { name: string; storage_path?: string };
+
 type QuotePayload = {
   customer_name?: string;
   customer_email?: string;
@@ -9,7 +11,7 @@ type QuotePayload = {
   project_description?: string;
   project_type?: string;
   timing?: string;
-  attachment_manifest?: Array<{ name: string }>;
+  attachment_manifest?: Array<AttachmentEntry>;
   turnstile_token?: string;
 };
 
@@ -22,6 +24,9 @@ const MAX_LEN = {
   project_type: 200,
   timing: 200,
 };
+
+const IMAGE_EXTS = /\.(jpe?g|png|webp|gif|heic|heif|avif|bmp|tiff?)$/i;
+const MAX_VISION_IMAGES = 8;
 
 function allowedOrigins(): string[] {
   const raw = Deno.env.get("PUBLIC_SITE_ORIGIN") ?? "";
@@ -96,7 +101,33 @@ async function verifyTurnstile(
   return json.success === true;
 }
 
-async function runAiSummary(projectText: string): Promise<{
+async function getSignedImageUrls(
+  admin: ReturnType<typeof createClient>,
+  manifest: AttachmentEntry[],
+): Promise<string[]> {
+  const imagePaths = manifest
+    .filter((m) => m.storage_path && IMAGE_EXTS.test(m.name))
+    .map((m) => m.storage_path!)
+    .slice(0, MAX_VISION_IMAGES);
+
+  if (imagePaths.length === 0) return [];
+
+  const signedUrls: string[] = [];
+  for (const path of imagePaths) {
+    const { data } = await admin.storage
+      .from("quote-attachments")
+      .createSignedUrl(path, 1800); // 30-minute URL for OpenAI to fetch
+    if (data?.signedUrl) {
+      signedUrls.push(data.signedUrl);
+    }
+  }
+  return signedUrls;
+}
+
+async function runAiSummary(
+  projectText: string,
+  imageUrls: string[],
+): Promise<{
   summary: string;
   model: string;
 }> {
@@ -105,6 +136,23 @@ async function runAiSummary(projectText: string): Promise<{
     throw new Error("OPENAI_API_KEY not configured");
   }
   const model = "gpt-4o-mini";
+
+  // Build user message content — text + optional vision images
+  type ContentPart =
+    | { type: "text"; text: string }
+    | { type: "image_url"; image_url: { url: string; detail: "low" | "high" | "auto" } };
+
+  const userContent: ContentPart[] = [{ type: "text", text: projectText }];
+  for (let i = 0; i < imageUrls.length; i++) {
+    // Use high detail for the first 2 images (better site analysis) and
+    // low for the rest to keep token cost reasonable.
+    const detail: "low" | "high" = i < 2 ? "high" : "low";
+    userContent.push({
+      type: "image_url",
+      image_url: { url: imageUrls[i], detail },
+    });
+  }
+
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -117,11 +165,11 @@ async function runAiSummary(projectText: string): Promise<{
         {
           role: "system",
           content:
-            "You help a residential groundwork contractor in British Columbia. Write a concise, professional project summary for internal review (3–6 short paragraphs max). Use plain language. Do not invent site facts; only use details from the user message.",
+            "You help a residential groundwork contractor in British Columbia. Write a concise, professional project summary for the client (3–6 short paragraphs max). Use plain, warm language. If site photos are included, describe what you observe and relate it to the scope of work. Do not invent site facts; only use details from the user message and attached images.",
         },
         {
           role: "user",
-          content: projectText,
+          content: userContent,
         },
       ],
       max_tokens: 1200,
@@ -139,6 +187,70 @@ async function runAiSummary(projectText: string): Promise<{
   const summary = data.choices?.[0]?.message?.content?.trim() ?? "";
   if (!summary) throw new Error("Empty AI response");
   return { summary, model };
+}
+
+async function sendNotificationEmail(params: {
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  project_address: string;
+  project_description: string;
+  project_type: string;
+  timing: string;
+  ai_summary: string | null;
+  quote_id: string;
+  attachment_count: number;
+}): Promise<void> {
+  const apiKey = Deno.env.get("RESEND_API_KEY");
+  if (!apiKey) return; // email is optional
+
+  const fromAddress =
+    Deno.env.get("RESEND_FROM_EMAIL") || "onboarding@resend.dev";
+  const toAddress =
+    Deno.env.get("QUOTE_NOTIFY_EMAIL") || "quotes@apexgroundworks.com";
+
+  const lines = [
+    `New Smart Quote from ${params.customer_name}`,
+    "",
+    `Name: ${params.customer_name}`,
+    `Email: ${params.customer_email}`,
+    params.customer_phone ? `Phone: ${params.customer_phone}` : null,
+    `Address: ${params.project_address}`,
+    params.project_type ? `Project type: ${params.project_type}` : null,
+    params.timing ? `Timing: ${params.timing}` : null,
+    `Attachments: ${params.attachment_count}`,
+    "",
+    "Description:",
+    params.project_description,
+    params.ai_summary
+      ? `\n---\nAI Summary:\n${params.ai_summary}`
+      : null,
+    "",
+    `Quote ID: ${params.quote_id}`,
+  ]
+    .filter((l) => l !== null)
+    .join("\n");
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: fromAddress,
+      to: [toAddress],
+      reply_to: params.customer_email,
+      subject: `New Smart Quote — ${params.customer_name} — ${params.project_address}`,
+      text: lines,
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    console.error("Resend email error", res.status, errText);
+    // Non-fatal — don't fail the submission over email
+  }
 }
 
 Deno.serve(async (req) => {
@@ -192,10 +304,13 @@ Deno.serve(async (req) => {
     return jsonResponse(req, 400, { error: "Invalid email address" });
   }
 
-  let manifest: Array<{ name: string }> = [];
+  let manifest: AttachmentEntry[] = [];
   if (Array.isArray(payload.attachment_manifest)) {
     manifest = payload.attachment_manifest
-      .map((x) => ({ name: trimStr(x?.name, 500) }))
+      .map((x) => ({
+        name: trimStr(x?.name, 500),
+        storage_path: x?.storage_path ? trimStr(x.storage_path, 1000) : undefined,
+      }))
       .filter((x) => x.name.length > 0)
       .slice(0, 25);
   }
@@ -245,6 +360,14 @@ Deno.serve(async (req) => {
   let finalStatus = initialStatus;
 
   if (openaiConfigured) {
+    // Resolve signed URLs for any uploaded images
+    let imageUrls: string[] = [];
+    try {
+      imageUrls = await getSignedImageUrls(admin, manifest);
+    } catch (e) {
+      console.error("Signed URL error", e);
+    }
+
     const projectText = [
       `Name: ${customer_name}`,
       `Email: ${customer_email}`,
@@ -256,14 +379,14 @@ Deno.serve(async (req) => {
       "Description:",
       project_description,
       manifest.length
-        ? `\nAttachments (filenames only): ${manifest.map((m) => m.name).join(", ")}`
+        ? `\nAttachments (filenames): ${manifest.map((m) => m.name).join(", ")}`
         : "",
     ]
       .filter(Boolean)
       .join("\n");
 
     try {
-      const ai = await runAiSummary(projectText);
+      const ai = await runAiSummary(projectText, imageUrls);
       ai_summary = ai.summary;
       ai_model = ai.model;
       ai_generated_at = new Date().toISOString();
@@ -297,6 +420,21 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Send notification email (fire-and-forget — errors are logged but never
+  // propagated so a transient email failure does not fail the submission).
+  sendNotificationEmail({
+    customer_name,
+    customer_email,
+    customer_phone,
+    project_address,
+    project_description,
+    project_type,
+    timing,
+    ai_summary,
+    quote_id: id,
+    attachment_count: manifest.length,
+  }).catch((e) => console.error("Email notification error", e));
+
   return jsonResponse(req, 200, {
     id,
     status: finalStatus,
@@ -305,3 +443,4 @@ Deno.serve(async (req) => {
     ai_generated_at,
   });
 });
+

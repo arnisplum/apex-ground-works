@@ -1616,3 +1616,56 @@ select.input:focus {
   color: var(--color-accent);
   font-weight: 500;
 }
+
+/* —— Print styles (quote-preview.html summary) —— */
+@media print {
+  .site-header,
+  .site-footer,
+  .page-hero,
+  .quote-card-header,
+  .quote-preview-actions,
+  .quote-card-intro,
+  .quote-form-footnote,
+  .quote-preview-warning,
+  .skip-link {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+    color: #111;
+    font-size: 11pt;
+  }
+
+  .quote-layout {
+    padding: 0;
+    max-width: 100%;
+  }
+
+  .card {
+    box-shadow: none;
+    border: none;
+    padding: 0;
+  }
+
+  .quote-preview-panel {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 1rem;
+  }
+
+  .quote-preview-panel__title {
+    font-size: 14pt;
+    margin-bottom: 0.5rem;
+  }
+
+  .quote-preview-panel__text {
+    white-space: pre-wrap;
+    font-size: 11pt;
+    line-height: 1.6;
+  }
+
+  .quote-preview-panel__icon-wrap {
+    display: none;
+  }
+}

@@ -98,7 +98,26 @@ Use the same origin(s) you listed in `PUBLIC_SITE_ORIGIN` for CORS.
 
 Migration `20260421000002_remove_anon_insert_quote_requests.sql` removes anonymous `INSERT` on `quote_requests` so only the Edge Function (service role) writes rows. Apply with `db:push` once you no longer need direct anon inserts.
 
-## 9. Staff admin app (`admin/`)
+## 9. Storage bucket (file uploads)
+
+Migration `20260424000003_quote_attachments_bucket.sql` creates the private `quote-attachments` bucket and allows anonymous uploads. Apply with `db:push`.
+
+Then paste your **anon key** (Dashboard → Project Settings → API → anon / public) into the `data-supabase-anon-key` attribute on `<body>` in `quote.html` and `quote-preview.html`. With this set, the form uploads photo/PDF attachments to `quote-attachments/{uuid}/` before navigating to the preview page, and the Edge Function generates signed URLs so the OpenAI Vision API can analyze site photos.
+
+## 10. Email notifications (Resend)
+
+1. Create a free account at [resend.com](https://resend.com) and add/verify your sending domain.
+2. Create an API key and set it as an Edge Function secret:
+   ```bash
+   npx supabase secrets set RESEND_API_KEY=re_...
+   npx supabase secrets set RESEND_FROM_EMAIL=noreply@apexgroundworks.com
+   npx supabase secrets set QUOTE_NOTIFY_EMAIL=quotes@apexgroundworks.com
+   ```
+3. Re-deploy the function: `npm run functions:deploy`
+
+The Edge Function sends a notification email to `QUOTE_NOTIFY_EMAIL` (default `quotes@apexgroundworks.com`) after every successful submission, including the AI summary and file count. Email is non-fatal — if `RESEND_API_KEY` is not set, the submission still succeeds.
+
+## 11. Staff admin app (`admin/`)
 
 ```bash
 cd admin
