@@ -8,9 +8,24 @@ type QuoteRow = {
   status: string;
   customer_name: string;
   customer_email: string;
+  customer_phone: string | null;
   project_address: string;
   project_description: string;
+  project_type: string | null;
+  timing: string | null;
+  attachment_manifest: AttachmentItem[] | null;
   ai_summary: string | null;
+  ai_project_description: string | null;
+  owner_notes: string | null;
+  project_line: string | null;
+};
+
+type AttachmentItem = {
+  name: string;
+  path?: string;
+  bucket?: string;
+  size?: number;
+  type?: string;
 };
 
 type NoteRow = {
@@ -28,6 +43,13 @@ function parseHash(): { view: "queue" | "detail"; id: string | null } {
   return { view: "queue", id: null };
 }
 
+function formatBytes(size?: number): string {
+  if (!size || size < 1) return "";
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [staffOk, setStaffOk] = useState<boolean | null>(null);
@@ -41,6 +63,7 @@ export default function App() {
   const [detail, setDetail] = useState<QuoteRow | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [notes, setNotes] = useState<NoteRow[]>([]);
+  const [attachmentLinks, setAttachmentLinks] = useState<Record<string, string>>({});
   const [statusEdit, setStatusEdit] = useState("");
   const [noteBody, setNoteBody] = useState("");
   const [saving, setSaving] = useState(false);
@@ -96,7 +119,7 @@ export default function App() {
     const { data, error } = await supabase
       .from("quote_requests")
       .select(
-        "id, created_at, status, customer_name, customer_email, project_address, project_description, ai_summary",
+        "id, created_at, status, customer_name, customer_email, customer_phone, project_address, project_description, project_type, timing, attachment_manifest, ai_summary, ai_project_description, owner_notes, project_line",
       )
       .order("created_at", { ascending: false })
       .limit(200);
@@ -117,10 +140,11 @@ export default function App() {
     async (id: string) => {
       setDetailLoading(true);
       setErr(null);
+      setAttachmentLinks({});
       const { data: q, error: qe } = await supabase
         .from("quote_requests")
         .select(
-          "id, created_at, status, customer_name, customer_email, project_address, project_description, ai_summary",
+          "id, created_at, status, customer_name, customer_email, customer_phone, project_address, project_description, project_type, timing, attachment_manifest, ai_summary, ai_project_description, owner_notes, project_line",
         )
         .eq("id", id)
         .maybeSingle();
@@ -138,6 +162,21 @@ export default function App() {
       const row = q as QuoteRow;
       setDetail(row);
       setStatusEdit(row.status);
+
+      const manifest = Array.isArray(row.attachment_manifest)
+        ? row.attachment_manifest
+        : [];
+      const signedLinks: Record<string, string> = {};
+      await Promise.all(
+        manifest.map(async (item) => {
+          if (!item.path) return;
+          const { data } = await supabase.storage
+            .from(item.bucket || "quote-attachments")
+            .createSignedUrl(item.path, 60 * 60);
+          if (data?.signedUrl) signedLinks[item.path] = data.signedUrl;
+        }),
+      );
+      setAttachmentLinks(signedLinks);
 
       const { data: n, error: ne } = await supabase
         .from("quote_notes")
@@ -288,10 +327,17 @@ export default function App() {
             <>
               <div className="card">
                 <p className="eyebrow">Customer</p>
+                {detail.project_line ? <h2>{detail.project_line}</h2> : null}
                 <p>
                   <strong>{detail.customer_name}</strong> · {detail.customer_email}
                 </p>
+                {detail.customer_phone ? <p className="muted">{detail.customer_phone}</p> : null}
                 <p className="muted">{detail.project_address}</p>
+                {[detail.project_type, detail.timing].filter(Boolean).length ? (
+                  <p className="muted">
+                    {[detail.project_type, detail.timing].filter(Boolean).join(" · ")}
+                  </p>
+                ) : null}
                 <p style={{ marginTop: "1rem" }}>{detail.project_description}</p>
                 <div className="field" style={{ marginTop: "1rem" }}>
                   <label htmlFor="st">Status</label>
@@ -326,10 +372,52 @@ export default function App() {
                 </button>
               </div>
 
-              {detail.ai_summary ? (
+              {detail.ai_project_description || detail.ai_summary ? (
                 <div className="card">
-                  <p className="eyebrow">AI summary</p>
-                  <p style={{ whiteSpace: "pre-wrap" }}>{detail.ai_summary}</p>
+                  <p className="eyebrow">AI project description</p>
+                  <p style={{ whiteSpace: "pre-wrap" }}>
+                    {detail.ai_project_description || detail.ai_summary}
+                  </p>
+                </div>
+              ) : null}
+
+              {detail.owner_notes ? (
+                <div className="card">
+                  <p className="eyebrow">Owner notes</p>
+                  <p style={{ whiteSpace: "pre-wrap" }}>{detail.owner_notes}</p>
+                </div>
+              ) : null}
+
+              {Array.isArray(detail.attachment_manifest) &&
+              detail.attachment_manifest.length ? (
+                <div className="card">
+                  <p className="eyebrow">Customer uploads</p>
+                  <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                    {detail.attachment_manifest.map((item, ix) => {
+                      const url = item.path ? attachmentLinks[item.path] : "";
+                      const meta = [item.type, formatBytes(item.size)]
+                        .filter(Boolean)
+                        .join(" · ");
+                      return (
+                        <li
+                          key={`${item.path || item.name}-${ix}`}
+                          style={{
+                            padding: "0.75rem 0",
+                            borderBottom: "1px solid var(--color-border)",
+                          }}
+                        >
+                          {url ? (
+                            <a href={url} target="_blank" rel="noreferrer">
+                              {item.name}
+                            </a>
+                          ) : (
+                            <strong>{item.name}</strong>
+                          )}
+                          {meta ? <div className="muted">{meta}</div> : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
                 </div>
               ) : null}
 
@@ -403,6 +491,7 @@ export default function App() {
                   <tr>
                     <th>Received</th>
                     <th>Status</th>
+                    <th>Project</th>
                     <th>Name</th>
                     <th>Email</th>
                     <th>Address</th>
@@ -414,6 +503,7 @@ export default function App() {
                     <tr key={q.id}>
                       <td>{new Date(q.created_at).toLocaleString()}</td>
                       <td>{q.status}</td>
+                      <td>{q.project_line || q.project_type || "Smart Quote"}</td>
                       <td>{q.customer_name}</td>
                       <td>{q.customer_email}</td>
                       <td>{q.project_address}</td>

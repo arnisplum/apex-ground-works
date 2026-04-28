@@ -28,6 +28,44 @@
     };
   }
 
+  function draftToSubmitFormData(draft, form) {
+    var payload = draftToSubmitPayload(draft);
+    if (!payload) return null;
+    var fd = new FormData();
+    Object.keys(payload).forEach(function (key) {
+      if (key === "attachment_manifest") {
+        fd.append(key, JSON.stringify(payload[key] || []));
+        return;
+      }
+      fd.append(key, payload[key] || "");
+    });
+    if (form) {
+      form.querySelectorAll('input[type="file"]').forEach(function (input) {
+        if (!input.files || !input.files.length) return;
+        var maxF = parseInt(input.getAttribute("data-max-files") || "10", 10);
+        if (!Number.isFinite(maxF) || maxF < 1) maxF = 10;
+        Array.from(input.files)
+          .slice(0, maxF)
+          .forEach(function (file) {
+            fd.append("attachments", file, file.name);
+          });
+      });
+    }
+    return fd;
+  }
+
+  function parseQuoteResponse(res) {
+    return res.text().then(function (text) {
+      var data = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (err) {
+        data = { error: text || "Unexpected response from quote service." };
+      }
+      return { ok: res.ok, status: res.status, data: data };
+    });
+  }
+
   function parseQuoteSubmitResultFromStorage() {
     try {
       var raw = sessionStorage.getItem(QUOTE_SUBMIT_RESULT_KEY);
@@ -83,7 +121,7 @@
 
   function formToQuoteDraft(form) {
     var fd = new FormData(form);
-    var draft = { attachments: [] };
+    var draft = { attachments: [], attachmentPreviews: [] };
     fd.forEach(function (value, key) {
       if (typeof value === "string") {
         draft[key] = value;
@@ -100,6 +138,94 @@
         });
     });
     return draft;
+  }
+
+  function isPreviewableImageFile(file) {
+    if (!file) return false;
+    var type = String(file.type || "");
+    var name = String(file.name || "");
+    return type.indexOf("image/") === 0 || /\.(jpe?g|png|webp|gif)$/i.test(name);
+  }
+
+  function imageFileToPreview(file) {
+    return new Promise(function (resolve) {
+      if (!isPreviewableImageFile(file)) {
+        resolve(null);
+        return;
+      }
+      var url = "";
+      var settled = false;
+      var timer = window.setTimeout(function () {
+        if (settled) return;
+        settled = true;
+        try {
+          if (url) URL.revokeObjectURL(url);
+        } catch (e) {}
+        resolve(null);
+      }, 2500);
+      function finish(value) {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timer);
+        try {
+          if (url) URL.revokeObjectURL(url);
+        } catch (e) {}
+        resolve(value);
+      }
+      try {
+        url = URL.createObjectURL(file);
+      } catch (e) {
+        finish(null);
+        return;
+      }
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var maxW = 900;
+          var maxH = 680;
+          var scale = Math.min(1, maxW / img.naturalWidth, maxH / img.naturalHeight);
+          var w = Math.max(1, Math.round(img.naturalWidth * scale));
+          var h = Math.max(1, Math.round(img.naturalHeight * scale));
+          var canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          var ctx = canvas.getContext("2d");
+          if (!ctx) {
+            resolve(null);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, w, h);
+          finish({
+            name: file.name,
+            type: file.type,
+            src: canvas.toDataURL("image/jpeg", 0.7),
+          });
+        } catch (e) {
+          finish(null);
+        }
+      };
+      img.onerror = function () {
+        finish(null);
+      };
+      img.src = url;
+    });
+  }
+
+  function addAttachmentPreviewsToDraft(form, draft) {
+    if (!form || !draft) return Promise.resolve(draft);
+    var files = [];
+    form.querySelectorAll('input[type="file"]').forEach(function (input) {
+      if (!input.files || !input.files.length) return;
+      Array.from(input.files)
+        .slice(0, 6)
+        .forEach(function (file) {
+          files.push(file);
+        });
+    });
+    return Promise.all(files.map(imageFileToPreview)).then(function (previews) {
+      draft.attachmentPreviews = previews.filter(Boolean);
+      return draft;
+    });
   }
 
   var QUOTE_MAILTO_FIELD_ORDER = [
@@ -143,6 +269,22 @@
     }
   }
 
+  function clearQuoteSubmitResult() {
+    try {
+      sessionStorage.removeItem(QUOTE_SUBMIT_RESULT_KEY);
+    } catch (e) {}
+  }
+
+  function hydrateQuoteFormFromDraft(form) {
+    var draft = parseQuoteDraftFromStorage();
+    if (!draft) return;
+    QUOTE_MAILTO_FIELD_ORDER.forEach(function (key) {
+      var field = form.elements[key];
+      if (!field || typeof draft[key] !== "string") return;
+      field.value = draft[key];
+    });
+  }
+
   function quoteDraftLooksComplete(draft) {
     if (!draft) return false;
     return (
@@ -154,9 +296,13 @@
   }
 
   function classifyAttachmentFile(file) {
-    if (file.type.indexOf("image/") === 0) return "image";
-    if (file.type.indexOf("video/") === 0) return "video";
-    if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) return "pdf";
+    var type = String((file && file.type) || "");
+    var name = String((file && file.name) || "");
+    if (type.indexOf("image/") === 0 || /\.(jpe?g|png|webp|gif)$/i.test(name)) {
+      return "image";
+    }
+    if (type.indexOf("video/") === 0 || /\.(mp4|mov|webm)$/i.test(name)) return "video";
+    if (type === "application/pdf" || /\.pdf$/i.test(name)) return "pdf";
     return "other";
   }
 
@@ -415,27 +561,269 @@
 
   var quoteStep1Form = document.querySelector("form[data-quote-step='1']");
   if (quoteStep1Form) {
+    hydrateQuoteFormFromDraft(quoteStep1Form);
+    var step1SubmitUrl = getQuoteSubmitUrl();
+    var step1SubmitBtn = quoteStep1Form.querySelector(".quote-submit-btn");
+    var step1DefaultText = step1SubmitBtn ? step1SubmitBtn.textContent : "";
+    quoteStep1Form.addEventListener("input", clearQuoteSubmitResult);
+    quoteStep1Form.addEventListener("change", clearQuoteSubmitResult);
     quoteStep1Form.addEventListener("submit", function (e) {
       e.preventDefault();
       if (!quoteStep1Form.checkValidity()) {
         quoteStep1Form.reportValidity();
         return;
       }
-      try {
-        var draft = formToQuoteDraft(quoteStep1Form);
-        sessionStorage.setItem(QUOTE_DRAFT_STORAGE_KEY, JSON.stringify(draft));
-      } catch (err) {}
-      window.location.href = QUOTE_PREVIEW_PAGE;
+      var initialDraft = formToQuoteDraft(quoteStep1Form);
+      if (step1SubmitUrl) {
+        if (step1SubmitBtn) {
+          step1SubmitBtn.disabled = true;
+          step1SubmitBtn.setAttribute("aria-busy", "true");
+          step1SubmitBtn.textContent = "Saving request…";
+        }
+        addAttachmentPreviewsToDraft(quoteStep1Form, initialDraft)
+          .then(function (formDraft) {
+            try {
+              sessionStorage.setItem(
+                QUOTE_DRAFT_STORAGE_KEY,
+                JSON.stringify(formDraft),
+              );
+              clearQuoteSubmitResult();
+            } catch (err) {}
+            var body = draftToSubmitFormData(formDraft, quoteStep1Form);
+            if (!body) throw new Error("Could not prepare your quote request.");
+            return fetch(step1SubmitUrl, {
+              method: "POST",
+              body: body,
+            }).then(function (res) {
+              return parseQuoteResponse(res).then(function (out) {
+                return { out: out, formDraft: formDraft };
+              });
+            });
+          })
+          .then(function (out) {
+            if (!out.out.ok) {
+              throw new Error(
+                (out.out.data && out.out.data.error) ||
+                  "Could not save your quote request. Please try again.",
+              );
+            }
+            try {
+              sessionStorage.setItem(
+                QUOTE_DRAFT_STORAGE_KEY,
+                JSON.stringify(out.formDraft),
+              );
+              sessionStorage.setItem(
+                QUOTE_SUBMIT_RESULT_KEY,
+                JSON.stringify(out.out.data),
+              );
+            } catch (err) {}
+            window.location.href = QUOTE_PREVIEW_PAGE;
+          })
+          .catch(function (err) {
+            window.alert(
+              (err && err.message) ||
+                "Could not save your quote request. Please try again.",
+            );
+            if (step1SubmitBtn) {
+              step1SubmitBtn.disabled = false;
+              step1SubmitBtn.removeAttribute("aria-busy");
+              step1SubmitBtn.textContent = step1DefaultText;
+            }
+          });
+        return;
+      }
+      addAttachmentPreviewsToDraft(quoteStep1Form, initialDraft).then(function (draft) {
+        try {
+          sessionStorage.setItem(QUOTE_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+          clearQuoteSubmitResult();
+        } catch (err) {}
+        window.location.href = QUOTE_PREVIEW_PAGE;
+      });
     });
   }
 
   var quotePreviewRoot = document.getElementById("quote-preview");
   if (quotePreviewRoot) {
     var warnEl = document.getElementById("quote-preview-warning");
+    var successEl = document.getElementById("quote-preview-success");
     var submitBtn = document.getElementById("quote-preview-submit");
     var emailCopyBtn = document.getElementById("quote-preview-email-copy");
     var draft = parseQuoteDraftFromStorage();
     var submitUrl = getQuoteSubmitUrl();
+    var defaultSubmitText = submitBtn ? submitBtn.textContent : "";
+
+    function setQuoteReviewItem(id, value) {
+      var item = document.getElementById(id);
+      if (!item) return;
+      var text = String(value || "").trim();
+      item.hidden = !text;
+      var valueEl = item.querySelector("[data-review-value]");
+      if (valueEl) valueEl.textContent = text;
+    }
+
+    function renderQuoteReview(d) {
+      var review = document.getElementById("quote-review");
+      if (!review) return;
+      if (!quoteDraftLooksComplete(d)) {
+        review.hidden = true;
+        return;
+      }
+      var contact = [d.Email, d.Phone].filter(function (v) {
+        return String(v || "").trim();
+      });
+      var timeline = [d["Project type"], d.Timing].filter(function (v) {
+        return String(v || "").trim();
+      });
+      setQuoteReviewItem("quote-review-name", d.Name);
+      setQuoteReviewItem("quote-review-address", d["Project address"]);
+      setQuoteReviewItem("quote-review-contact", contact.join(" · "));
+      setQuoteReviewItem("quote-review-scope", d["Project description"]);
+      setQuoteReviewItem("quote-review-timeline", timeline.join(" · "));
+      setQuoteReviewItem(
+        "quote-review-attachments",
+        Array.isArray(d.attachments) && d.attachments.length
+          ? d.attachments.join(", ")
+          : "",
+      );
+      review.hidden = false;
+    }
+
+    function setText(id, value) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = String(value || "").trim();
+    }
+
+    function manifestImageUrl(item) {
+      if (!item || typeof item !== "object") return "";
+      var name = String(item.name || "");
+      var type = String(item.type || "");
+      var url = String(item.signed_url || item.signedUrl || item.url || "");
+      if (!url) return "";
+      if (type.indexOf("image/") === 0) return url;
+      if (/\.(jpe?g|png|webp|gif)$/i.test(name)) return url;
+      return "";
+    }
+
+    function renderQuoteDocument(d, result) {
+      var doc = document.getElementById("quote-document");
+      if (!doc || !quoteDraftLooksComplete(d)) return;
+      var contact = [d.Email, d.Phone].filter(function (v) {
+        return String(v || "").trim();
+      });
+      var timeline = [d["Project type"], d.Timing].filter(function (v) {
+        return String(v || "").trim();
+      });
+      var storedManifest =
+        result && Array.isArray(result.attachment_manifest)
+          ? result.attachment_manifest
+          : [];
+      var storedAttachmentNames = storedManifest
+        .map(function (item) {
+          if (typeof item === "string") return item;
+          return item && item.name;
+        })
+        .filter(function (name) {
+          return String(name || "").trim();
+        });
+      var attachments =
+        Array.isArray(d.attachments) && d.attachments.length
+          ? d.attachments
+          : storedAttachmentNames;
+      var projectLine =
+        (result && result.project_line) ||
+        d["Project type"] ||
+        "Apex Ground Works project request";
+      var aiText =
+        (result && result.ai_project_description) ||
+        (result && result.ai_summary) ||
+        "Apex has received your project details. Our team will review the request and follow up with practical next steps.";
+
+      setText("quote-document-title", projectLine);
+      setText("quote-document-client", d["Project address"]);
+      setText("quote-document-name", d.Name);
+      setText("quote-document-contact", contact.join(" · "));
+      setText("quote-document-address", d["Project address"]);
+      setText("quote-document-ai", aiText);
+      setText("quote-document-summary", d["Project description"]);
+      setText(
+        "quote-document-timing",
+        timeline.length ? "Project type and timing: " + timeline.join(" · ") : "",
+      );
+      setText(
+        "quote-document-attachments",
+        attachments.length
+          ? attachments.length +
+              " uploaded file" +
+              (attachments.length === 1 ? "" : "s") +
+              " will be reviewed alongside your request."
+          : "No files were attached with this request. If helpful, the Apex team may ask for photos before scheduling a site visit.",
+      );
+      var gallery = document.getElementById("quote-document-gallery");
+      var fileList = document.getElementById("quote-document-file-list");
+      if (gallery) {
+        gallery.textContent = "";
+        var previews = Array.isArray(d.attachmentPreviews) ? d.attachmentPreviews : [];
+        var previewNames = [];
+        previews.forEach(function (preview) {
+          if (!preview || !preview.src) return;
+          var figure = document.createElement("figure");
+          var img = document.createElement("img");
+          var caption = document.createElement("figcaption");
+          img.src = preview.src;
+          img.alt = preview.name || "Uploaded project photo";
+          img.loading = "lazy";
+          caption.textContent = preview.name || "Project photo";
+          previewNames.push(preview.name);
+          figure.appendChild(img);
+          figure.appendChild(caption);
+          gallery.appendChild(figure);
+        });
+        storedManifest.forEach(function (item) {
+          var imageUrl = manifestImageUrl(item);
+          var name = item && item.name ? item.name : "Uploaded project photo";
+          if (!imageUrl || previewNames.indexOf(name) !== -1) return;
+          var figure = document.createElement("figure");
+          var img = document.createElement("img");
+          var caption = document.createElement("figcaption");
+          img.src = imageUrl;
+          img.alt = name;
+          img.loading = "lazy";
+          caption.textContent = name;
+          previewNames.push(name);
+          figure.appendChild(img);
+          figure.appendChild(caption);
+          gallery.appendChild(figure);
+        });
+        gallery.hidden = !gallery.children.length;
+        if (fileList) {
+          fileList.textContent = "";
+          attachments
+            .filter(function (name) {
+              return previewNames.indexOf(name) === -1;
+            })
+            .forEach(function (name) {
+              var item = document.createElement("li");
+              item.textContent = name;
+              fileList.appendChild(item);
+            });
+          fileList.hidden = !fileList.children.length;
+        }
+      }
+      doc.hidden = false;
+    }
+
+    function applyQuotePreviewReady() {
+      var titleEl = document.getElementById("quote-preview-panel-title");
+      var textEl = document.getElementById("quote-preview-ai");
+      if (titleEl) titleEl.textContent = "Ready to submit";
+      if (textEl) {
+        textEl.textContent =
+          submitUrl
+            ? "Review the details below, then submit your request. Your project summary will appear here after it is saved."
+            : "Review the details below, then open an email draft to send your request.";
+      }
+    }
 
     function applyQuotePreviewSuccess(result) {
       if (submitBtn) submitBtn.removeAttribute("aria-busy");
@@ -445,12 +833,13 @@
       if (titleEl) titleEl.textContent = "Project summary";
       if (textEl) {
         textEl.textContent =
+          (result && result.ai_project_description) ||
           (result && result.ai_summary) ||
           "Your request was saved. We will follow up with clear next steps.";
       }
       if (introEl) {
         introEl.textContent =
-          "Review the summary below. Use “Email a copy” if you still want a mail draft with your details and attachment file names.";
+          "Your Smart Quote preview is ready as a clean client-facing project summary. Apex will review it and follow up within 24 hours.";
       }
       var foot = quotePreviewRoot.querySelector(".quote-form-footnote");
       if (foot) {
@@ -463,14 +852,23 @@
       }
       if (emailCopyBtn) emailCopyBtn.hidden = false;
       if (warnEl) warnEl.hidden = true;
+      if (successEl) {
+        successEl.hidden = false;
+        successEl.textContent =
+          "Request received" + (result && result.id ? " — reference " + result.id : "") + ".";
+      }
+      renderQuoteDocument(draft, result);
     }
 
     function hydrateQuotePreviewFromStorage() {
       var saved = parseQuoteSubmitResultFromStorage();
-      if (!saved || !saved.id) return;
-      if (!quoteDraftLooksComplete(draft)) return;
+      if (!saved || !saved.id) return false;
+      if (!quoteDraftLooksComplete(draft)) return false;
       applyQuotePreviewSuccess(saved);
+      return true;
     }
+
+    renderQuoteReview(draft);
 
     if (!quoteDraftLooksComplete(draft)) {
       if (warnEl) {
@@ -483,9 +881,11 @@
         submitBtn.setAttribute("aria-disabled", "true");
       }
     } else {
-      hydrateQuotePreviewFromStorage();
-      if (submitBtn && submitUrl) {
-        submitBtn.textContent = "Submit request";
+      var hasSavedSubmit = hydrateQuotePreviewFromStorage();
+      if (!hasSavedSubmit) applyQuotePreviewReady();
+      if (submitBtn) {
+        submitBtn.textContent = submitUrl ? "Submit request" : "Open email draft";
+        defaultSubmitText = submitBtn.textContent;
       }
     }
 
@@ -518,20 +918,21 @@
         }
         submitBtn.disabled = true;
         submitBtn.setAttribute("aria-busy", "true");
+        submitBtn.textContent = "Submitting…";
         if (warnEl) {
           warnEl.hidden = true;
           warnEl.textContent = "";
+        }
+        if (successEl) {
+          successEl.hidden = true;
+          successEl.textContent = "";
         }
         fetch(submitUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         })
-          .then(function (res) {
-            return res.json().then(function (data) {
-              return { ok: res.ok, status: res.status, data: data };
-            });
-          })
+          .then(parseQuoteResponse)
           .then(function (out) {
             if (!out.ok) {
               var msg =
@@ -556,6 +957,7 @@
             }
             submitBtn.disabled = false;
             submitBtn.removeAttribute("aria-busy");
+            submitBtn.textContent = defaultSubmitText;
           });
       });
     }

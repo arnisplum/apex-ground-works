@@ -9,8 +9,29 @@ type QuotePayload = {
   project_description?: string;
   project_type?: string;
   timing?: string;
-  attachment_manifest?: Array<{ name: string }>;
+  attachment_manifest?: AttachmentManifestItem[];
   turnstile_token?: string;
+};
+
+type AttachmentManifestItem = {
+  name: string;
+  path?: string;
+  bucket?: string;
+  size?: number;
+  type?: string;
+  signed_url?: string;
+};
+
+type ParsedQuotePayload = QuotePayload & {
+  files: File[];
+};
+
+type AiQuoteOutput = {
+  project_line: string | null;
+  project_description: string | null;
+  owner_notes: string | null;
+  summary: string;
+  model: string;
 };
 
 const MAX_LEN = {
@@ -22,6 +43,10 @@ const MAX_LEN = {
   project_type: 200,
   timing: 200,
 };
+
+const ATTACHMENT_BUCKET = "quote-attachments";
+const MAX_FILES = 10;
+const MAX_FILE_SIZE = 25 * 1024 * 1024;
 
 function allowedOrigins(): string[] {
   const raw = Deno.env.get("PUBLIC_SITE_ORIGIN") ?? "";
@@ -76,6 +101,176 @@ function isValidEmail(s: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 }
 
+function formString(fd: FormData, key: string, fallbackKey?: string): string {
+  const direct = fd.get(key);
+  if (typeof direct === "string") return direct;
+  if (fallbackKey) {
+    const fallback = fd.get(fallbackKey);
+    if (typeof fallback === "string") return fallback;
+  }
+  return "";
+}
+
+function parseJsonManifest(raw: FormDataEntryValue | null): AttachmentManifestItem[] {
+  if (typeof raw !== "string" || !raw.trim()) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((x) => {
+        if (!x || typeof x !== "object") return null;
+        const item = x as Record<string, unknown>;
+        const name = trimStr(item.name, 500);
+        if (!name) return null;
+        return {
+          name,
+          path: trimStr(item.path, 1200) || undefined,
+          bucket: trimStr(item.bucket, 100) || undefined,
+          size: typeof item.size === "number" ? item.size : undefined,
+          type: trimStr(item.type, 200) || undefined,
+        };
+      })
+      .filter((x): x is AttachmentManifestItem => !!x)
+      .slice(0, 25);
+  } catch {
+    return [];
+  }
+}
+
+async function parseQuotePayload(req: Request): Promise<ParsedQuotePayload> {
+  const contentType = req.headers.get("Content-Type") ?? "";
+  if (contentType.toLowerCase().includes("multipart/form-data")) {
+    const fd = await req.formData();
+    const files = fd
+      .getAll("attachments")
+      .filter((v): v is File => v instanceof File && v.size > 0)
+      .slice(0, MAX_FILES);
+
+    return {
+      customer_name: formString(fd, "customer_name", "Name"),
+      customer_email: formString(fd, "customer_email", "Email"),
+      customer_phone: formString(fd, "customer_phone", "Phone"),
+      project_address: formString(fd, "project_address", "Project address"),
+      project_description: formString(
+        fd,
+        "project_description",
+        "Project description",
+      ),
+      project_type: formString(fd, "project_type", "Project type"),
+      timing: formString(fd, "timing", "Timing"),
+      turnstile_token: formString(fd, "turnstile_token"),
+      attachment_manifest: parseJsonManifest(fd.get("attachment_manifest")),
+      files,
+    };
+  }
+
+  const payload = (await req.json()) as QuotePayload;
+  return { ...payload, files: [] };
+}
+
+function safeObjectName(name: string): string {
+  const fallback = "attachment";
+  const cleaned = name
+    .normalize("NFKD")
+    .replace(/[^\w.\-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 120);
+  return cleaned || fallback;
+}
+
+function isAllowedAttachment(file: File): boolean {
+  if (file.size > MAX_FILE_SIZE) return false;
+  if (file.type.startsWith("image/")) return true;
+  if (file.type.startsWith("video/")) return true;
+  if (file.type === "application/pdf") return true;
+  return /\.(jpe?g|png|webp|gif|pdf|heic|heif)$/i.test(file.name);
+}
+
+function attachmentContentType(file: File): string {
+  if (file.type && file.type !== "application/octet-stream") return file.type;
+  if (/\.jpe?g$/i.test(file.name)) return "image/jpeg";
+  if (/\.png$/i.test(file.name)) return "image/png";
+  if (/\.webp$/i.test(file.name)) return "image/webp";
+  if (/\.gif$/i.test(file.name)) return "image/gif";
+  if (/\.heic$/i.test(file.name)) return "image/heic";
+  if (/\.heif$/i.test(file.name)) return "image/heif";
+  if (/\.pdf$/i.test(file.name)) return "application/pdf";
+  if (/\.mp4$/i.test(file.name)) return "video/mp4";
+  if (/\.mov$/i.test(file.name)) return "video/quicktime";
+  if (/\.webm$/i.test(file.name)) return "video/webm";
+  return "application/octet-stream";
+}
+
+async function uploadAttachments(
+  admin: ReturnType<typeof createClient>,
+  quoteId: string,
+  files: File[],
+): Promise<AttachmentManifestItem[]> {
+  const manifest: AttachmentManifestItem[] = [];
+  for (const [index, file] of files.slice(0, MAX_FILES).entries()) {
+    if (!isAllowedAttachment(file)) {
+      throw new Error(
+        `Attachment ${file.name} is too large or not an accepted file type.`,
+      );
+    }
+    const safeName = safeObjectName(file.name);
+    const path = `${quoteId}/${String(index + 1).padStart(2, "0")}-${crypto.randomUUID()}-${safeName}`;
+    const contentType = attachmentContentType(file);
+    const uploadFile =
+      file.type === contentType
+        ? file
+        : new File([await file.arrayBuffer()], file.name, { type: contentType });
+    const { data, error } = await admin.storage
+      .from(ATTACHMENT_BUCKET)
+      .upload(path, uploadFile, {
+        contentType,
+        cacheControl: "3600",
+        upsert: false,
+      });
+
+    if (error || !data?.path) {
+      console.error("Attachment upload error", error);
+      throw new Error(`Could not upload attachment ${file.name}.`);
+    }
+
+    manifest.push({
+      name: file.name,
+      path: data.path,
+      bucket: ATTACHMENT_BUCKET,
+      size: file.size,
+      type: contentType,
+    });
+  }
+  return manifest;
+}
+
+async function attachmentManifestForResponse(
+  admin: ReturnType<typeof createClient>,
+  manifest: AttachmentManifestItem[],
+): Promise<AttachmentManifestItem[]> {
+  const paths = manifest
+    .filter((item) => item.bucket === ATTACHMENT_BUCKET && item.path)
+    .map((item) => item.path!);
+
+  if (!paths.length) return manifest;
+
+  const { data, error } = await admin.storage
+    .from(ATTACHMENT_BUCKET)
+    .createSignedUrls(paths, 60 * 60 * 24);
+
+  if (error || !data) {
+    console.error("Attachment signed URL error", error);
+    return manifest;
+  }
+
+  return manifest.map((item) => {
+    if (item.bucket !== ATTACHMENT_BUCKET || !item.path) return item;
+    const signed = data.find((entry) => entry.path === item.path);
+    return signed?.signedUrl ? { ...item, signed_url: signed.signedUrl } : item;
+  });
+}
+
 async function verifyTurnstile(
   token: string,
   secret: string,
@@ -96,10 +291,70 @@ async function verifyTurnstile(
   return json.success === true;
 }
 
-async function runAiSummary(projectText: string): Promise<{
-  summary: string;
-  model: string;
-}> {
+function aiFieldText(value: unknown, max: number): string {
+  if (typeof value === "string") return value.trim().slice(0, max);
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === "string") return item.trim();
+        if (!item || typeof item !== "object") return "";
+        return Object.values(item as Record<string, unknown>)
+          .map((v) => (typeof v === "string" ? v.trim() : ""))
+          .filter(Boolean)
+          .join(": ");
+      })
+      .filter(Boolean)
+      .join("\n")
+      .slice(0, max);
+  }
+  if (value && typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([key, v]) => {
+        if (typeof v === "string" && v.trim()) return `${key}: ${v.trim()}`;
+        if (Array.isArray(v)) {
+          const parts = v
+            .map((x) => (typeof x === "string" ? x.trim() : ""))
+            .filter(Boolean);
+          if (parts.length) return `${key}: ${parts.join(", ")}`;
+        }
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n")
+      .slice(0, max);
+  }
+  return "";
+}
+
+function parseAiJson(content: string): Omit<AiQuoteOutput, "model"> {
+  const cleaned = content
+    .trim()
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/i, "")
+    .trim();
+  try {
+    const parsed = JSON.parse(cleaned) as Record<string, unknown>;
+    const projectDescription = aiFieldText(parsed.project_description, 6000);
+    const ownerNotes = aiFieldText(parsed.owner_notes, 6000);
+    const projectLine = aiFieldText(parsed.project_line, 240);
+    const summary = projectDescription || aiFieldText(parsed.summary, 6000);
+    return {
+      project_line: projectLine || null,
+      project_description: projectDescription || summary || null,
+      owner_notes: ownerNotes || null,
+      summary: summary || content.trim(),
+    };
+  } catch {
+    return {
+      project_line: null,
+      project_description: content.trim(),
+      owner_notes: null,
+      summary: content.trim(),
+    };
+  }
+}
+
+async function runAiSummary(projectText: string): Promise<AiQuoteOutput> {
   const key = Deno.env.get("OPENAI_API_KEY");
   if (!key) {
     throw new Error("OPENAI_API_KEY not configured");
@@ -117,7 +372,7 @@ async function runAiSummary(projectText: string): Promise<{
         {
           role: "system",
           content:
-            "You help a residential groundwork contractor in British Columbia. Write a concise, professional project summary for internal review (3–6 short paragraphs max). Use plain language. Do not invent site facts; only use details from the user message.",
+            "You write professional construction project summaries for Apex Ground Works, a residential excavation, drainage, retaining wall, and groundwork contractor in British Columbia. Return only valid JSON with keys: project_line, project_description, owner_notes. project_line is a short construction scope label for the owner pipeline. project_description is a concise, client-facing construction summary based only on the intake: describe the requested work, existing site concern, likely construction focus, and any practical review considerations from the customer's notes or attachments. Use direct professional language, not a thank-you note, sales pitch, or greeting. Do not invent dimensions, materials, site conditions, pricing, engineering requirements, permits, or timelines not provided. owner_notes are private estimator notes: likely service category, urgency, access/photo cues, follow-up questions, and risks.",
         },
         {
           role: "user",
@@ -126,6 +381,7 @@ async function runAiSummary(projectText: string): Promise<{
       ],
       max_tokens: 1200,
       temperature: 0.4,
+      response_format: { type: "json_object" },
     }),
   });
   if (!res.ok) {
@@ -136,9 +392,9 @@ async function runAiSummary(projectText: string): Promise<{
   const data = (await res.json()) as {
     choices?: Array<{ message?: { content?: string } }>;
   };
-  const summary = data.choices?.[0]?.message?.content?.trim() ?? "";
-  if (!summary) throw new Error("Empty AI response");
-  return { summary, model };
+  const content = data.choices?.[0]?.message?.content?.trim() ?? "";
+  if (!content) throw new Error("Empty AI response");
+  return { ...parseAiJson(content), model };
 }
 
 Deno.serve(async (req) => {
@@ -151,11 +407,11 @@ Deno.serve(async (req) => {
   }
 
   const secret = Deno.env.get("TURNSTILE_SECRET_KEY") ?? "";
-  let payload: QuotePayload;
+  let payload: ParsedQuotePayload;
   try {
-    payload = (await req.json()) as QuotePayload;
+    payload = await parseQuotePayload(req);
   } catch {
-    return jsonResponse(req, 400, { error: "Invalid JSON body" });
+    return jsonResponse(req, 400, { error: "Invalid quote submission" });
   }
 
   if (secret) {
@@ -192,10 +448,16 @@ Deno.serve(async (req) => {
     return jsonResponse(req, 400, { error: "Invalid email address" });
   }
 
-  let manifest: Array<{ name: string }> = [];
+  let manifest: AttachmentManifestItem[] = [];
   if (Array.isArray(payload.attachment_manifest)) {
     manifest = payload.attachment_manifest
-      .map((x) => ({ name: trimStr(x?.name, 500) }))
+      .map((x) => ({
+        name: trimStr(x?.name, 500),
+        path: trimStr(x?.path, 1200) || undefined,
+        bucket: trimStr(x?.bucket, 100) || undefined,
+        size: typeof x?.size === "number" ? x.size : undefined,
+        type: trimStr(x?.type, 200) || undefined,
+      }))
       .filter((x) => x.name.length > 0)
       .slice(0, 25);
   }
@@ -240,9 +502,37 @@ Deno.serve(async (req) => {
 
   const id = row.id as string;
   let ai_summary: string | null = null;
+  let ai_project_description: string | null = null;
+  let owner_notes: string | null = null;
+  let project_line: string | null = null;
   let ai_model: string | null = null;
   let ai_generated_at: string | null = null;
   let finalStatus = initialStatus;
+
+  if (payload.files.length) {
+    try {
+      const uploaded = await uploadAttachments(admin, id, payload.files);
+      manifest = uploaded.length ? uploaded : manifest;
+      const { error: attErr } = await admin
+        .from("quote_requests")
+        .update({ attachment_manifest: manifest })
+        .eq("id", id);
+      if (attErr) {
+        console.error("Attachment manifest update error", attErr);
+        return jsonResponse(req, 500, {
+          error: "Could not save uploaded attachment details",
+        });
+      }
+    } catch (e) {
+      console.error("Attachment pipeline error", e);
+      return jsonResponse(req, 400, {
+        error:
+          e instanceof Error
+            ? e.message
+            : "Could not save one or more attachments",
+      });
+    }
+  }
 
   if (openaiConfigured) {
     const projectText = [
@@ -256,7 +546,12 @@ Deno.serve(async (req) => {
       "Description:",
       project_description,
       manifest.length
-        ? `\nAttachments (filenames only): ${manifest.map((m) => m.name).join(", ")}`
+        ? `\nAttachments saved: ${manifest.map((m) => {
+          const detail = [m.name, m.type, m.size ? `${m.size} bytes` : ""]
+            .filter(Boolean)
+            .join(" · ");
+          return detail;
+        }).join(", ")}`
         : "",
     ]
       .filter(Boolean)
@@ -265,6 +560,9 @@ Deno.serve(async (req) => {
     try {
       const ai = await runAiSummary(projectText);
       ai_summary = ai.summary;
+      ai_project_description = ai.project_description;
+      owner_notes = ai.owner_notes;
+      project_line = ai.project_line;
       ai_model = ai.model;
       ai_generated_at = new Date().toISOString();
       finalStatus = "ai_ready";
@@ -273,6 +571,9 @@ Deno.serve(async (req) => {
         .from("quote_requests")
         .update({
           ai_summary,
+          ai_project_description,
+          owner_notes,
+          project_line,
           ai_model,
           ai_generated_at,
           status: finalStatus,
@@ -297,10 +598,16 @@ Deno.serve(async (req) => {
     }
   }
 
+  const responseManifest = await attachmentManifestForResponse(admin, manifest);
+
   return jsonResponse(req, 200, {
     id,
     status: finalStatus,
     ai_summary,
+    ai_project_description,
+    owner_notes,
+    project_line,
+    attachment_manifest: responseManifest,
     ai_model,
     ai_generated_at,
   });

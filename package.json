@@ -13,7 +13,10 @@
     "functions:serve": "supabase functions serve submit-smart-quote",
     "functions:deploy": "supabase functions deploy submit-smart-quote",
     "deploy:function": "node scripts/deploy-submit-smart-quote.mjs",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "serve:site": "node scripts/serve-static.mjs",
+    "test": "playwright test",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "repository": {
     "type": "git",
@@ -28,6 +31,8 @@
   "homepage": "https://github.com/arnisplum/apex-ground-works#readme",
   "description": "",
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@types/node": "^25.6.0",
     "supabase": "^2.91.2"
   }
 }
