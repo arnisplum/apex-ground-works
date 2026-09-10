@@ -16,7 +16,7 @@
     />
     <link rel="stylesheet" href="css/styles.css" />
     <link rel="stylesheet" href="css/v2.css" />
-    <link rel="preload" as="image" href="media/videos/APTimeline-1-poster.webp" type="image/webp" />
+    <link rel="preload" as="image" href="media/images/web/IMG_2836.webp" type="image/webp" />
   </head>
   <body class="v2">
     <a class="skip-link" href="#main">Skip to content</a>
@@ -49,46 +49,61 @@
     <main id="main">
       <!-- ————————————————————————— HERO ————————————————————————— -->
       <section class="v2-hero" aria-labelledby="v2-hero-heading">
-        <div class="v2-hero__media" aria-hidden="true">
-          <video
-            class="v2-hero__video"
-            autoplay
-            muted
-            loop
-            playsinline
-            preload="auto"
-            poster="media/videos/APTimeline-1-poster.webp"
-          >
-            <source src="media/videos/APTimeline 1.webm" type="video/webm" />
-            <source src="media/videos/APTimeline 1.mp4" type="video/mp4" />
-          </video>
+        <div class="v2-hero__bg" aria-hidden="true">
+          <picture>
+            <source srcset="media/images/web/IMG_2836.webp" type="image/webp" />
+            <img
+              src="media/images/web/IMG_2836.jpg"
+              alt=""
+              fetchpriority="high"
+              decoding="async"
+              width="1920"
+              height="1440"
+            />
+          </picture>
           <div class="v2-hero__scrim"></div>
         </div>
 
         <div class="v2-hero__inner">
-          <p class="v2-eyebrow v2-eyebrow--light">Excavation &amp; civil groundwork · Lower Mainland</p>
-          <h1 id="v2-hero-heading">
-            Groundwork done right,<br />before anything is built on it.
-          </h1>
-          <p class="v2-hero__lead">
-            Residential and light-commercial excavation, drainage, and small civil work — from
-            careful digging around existing homes to trenching, drain tile, and site prep left
-            clean and ready for the next trade.
-          </p>
-          <div class="v2-hero__actions">
-            <a class="btn btn-primary v2-btn-lg" href="#contact">Get a quote</a>
-            <a class="btn v2-btn-ghost v2-btn-lg" href="#work">See our work</a>
+          <div class="v2-hero__copy">
+            <p class="v2-eyebrow v2-eyebrow--light">Excavation &amp; civil groundwork · Lower Mainland</p>
+            <h1 id="v2-hero-heading">
+              Groundwork done right,<br />before anything is built on it.
+            </h1>
+            <p class="v2-hero__lead">
+              Residential and light-commercial excavation, drainage, and small civil work — from
+              careful digging around existing homes to trenching, drain tile, and site prep left
+              clean and ready for the next trade.
+            </p>
+            <div class="v2-hero__actions">
+              <a class="btn btn-primary v2-btn-lg" href="#contact">Get a quote</a>
+              <a class="btn v2-btn-ghost v2-btn-lg" href="#work">See our work</a>
+            </div>
+            <ul class="v2-hero__chips" aria-label="What sets us apart">
+              <li>Licensed &amp; insured</li>
+              <li>Clean, respectful sites</li>
+              <li>Clear scope &amp; pricing</li>
+            </ul>
           </div>
-          <ul class="v2-hero__chips" aria-label="What sets us apart">
-            <li>Licensed &amp; insured</li>
-            <li>Clean, respectful sites</li>
-            <li>Clear scope &amp; pricing</li>
-          </ul>
-        </div>
 
-        <a class="v2-hero__scroll" href="#credibility" aria-label="Scroll to learn more">
-          <span></span>
-        </a>
+          <figure class="v2-hero__video">
+            <div class="v2-hero__video-frame">
+              <video
+                autoplay
+                muted
+                loop
+                playsinline
+                controls
+                preload="metadata"
+                poster="media/videos/APTimeline-1-poster.webp"
+              >
+                <source src="media/videos/APTimeline 1.webm" type="video/webm" />
+                <source src="media/videos/APTimeline 1.mp4" type="video/mp4" />
+              </video>
+            </div>
+            <figcaption>Recent job — trenching &amp; utility work in progress</figcaption>
+          </figure>
+        </div>
       </section>
 
       <!-- ————————————————————— CREDIBILITY BAND ————————————————————— -->
