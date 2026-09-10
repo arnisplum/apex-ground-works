@@ -1,0 +1,17 @@
+# Apex Ground Works — static marketing site
+# Deploy from the Render dashboard (New → Blueprint) or Static Site pointing at this repo.
+services:
+  - type: web
+    name: apex-ground-works
+    runtime: static
+    repo: https://github.com/arnisplum/apex-ground-works
+    branch: main
+    buildCommand: "true"
+    staticPublishPath: .
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin

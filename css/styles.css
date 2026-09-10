@@ -1374,6 +1374,28 @@ select.input:focus {
   line-height: 1.65;
 }
 
+.contact-card .quote-field-row {
+  display: grid;
+  gap: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .contact-card .quote-field-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.contact-card .quote-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.contact-card .quote-form-actions > .btn-secondary {
+  text-decoration: none;
+}
+
 /* —— Quote page layout —— */
 .quote-layout {
   max-width: 640px;
