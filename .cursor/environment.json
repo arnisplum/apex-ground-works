@@ -1,0 +1,17 @@
+{
+  "name": "Apex Ground Works",
+  "install": "npm ci && npx playwright install --with-deps chromium && npm --prefix admin ci",
+  "terminals": [
+    {
+      "name": "static-site",
+      "command": "npm run serve:site",
+      "description": "Serves the static marketing site at http://127.0.0.1:4177 (root index.html, /services, /css, /js, /media)."
+    }
+  ],
+  "ports": [
+    {
+      "name": "static-site",
+      "port": 4177
+    }
+  ]
+}
