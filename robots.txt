@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+Disallow: /quote.html
+Disallow: /quote-preview.html
+Disallow: /admin/
+Disallow: /samples/
+Disallow: /supabase/

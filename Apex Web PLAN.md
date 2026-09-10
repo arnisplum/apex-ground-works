@@ -1,34 +1,41 @@
 # Apex Ground Works — Web project plan
 
-Created: 2026-04-10 · Updated: 2026-04-12
+Created: 2026-04-10 · Updated: 2026-09-10
 
-## Goals
+## Launch goal (now)
 
-- Present Apex Ground Works as a **warm, residential-friendly** local specialist — not a heavy civil or SaaS-cold brand.
-- Keep **one visual system** across the marketing site: the **Smart Quote** page (`quote.html`) and `css/styles.css` are the baseline for colors, type, spacing, cards, buttons, and forms.
-- Ship a calm **landing** (`index.html`), **project gallery**, **trust** section, **services**, and **contact** that all feel like the same product as Smart Quote.
+Ship a **static advertisement website** as soon as possible:
+
+- Homepage hero, trust, services, process, project gallery
+- Service detail pages
+- Simple **mailto contact** form (no accounts, no online estimates)
+- Ready for static hosting (Render / Netlify / similar)
+
+Smart Quote, Supabase, admin, and estimator tools are deferred — see [`docs/FUTURE.md`](docs/FUTURE.md).
 
 ## Design reference
 
-- **Master UI:** `quote.html` + shared tokens in `css/styles.css` (`:root` variables).
-- **Brand copy / positioning:** `apex-ground-works.md` (includes the Web design system summary).
+- **Master UI:** shared tokens in `css/styles.css` (`:root` variables); homepage + contact as the live public baseline.
+- **Brand copy / positioning:** `apex-ground-works.md`.
 
 ## Tasks
 
 - [x] Global tokens: warm page backgrounds, neutral text, `#2f6f6a` accent, soft borders, pill buttons, soft shadows.
 - [x] Landing hero with photo + warm scrim; sections use eyebrows (TRUST, SERVICES, PROJECTS, CONTACT).
-- [x] Smart Quote intake form (`quote.html`) aligned with form styling rules.
 - [x] Contact section with warm card + styled fields + mailto handoff (`js/site.js`).
 - [x] Project gallery grid using optimized `media/images/web/` assets.
-- [ ] Replace placeholder `mailto` target with production inbox when available.
-- [ ] Optional: server-side form handler or hosted form for quotes if mailto is not enough.
+- [x] Public nav/CTAs point to contact (Smart Quote unlinked / noindex).
+- [x] Deploy docs + `render.yaml` for static hosting.
+- [ ] Replace `quotes@apexgroundworks.com` if a different production inbox is preferred.
+- [ ] Point custom domain at the static host after first deploy.
 
-## Files
+## Files (public launch)
 
 | File | Purpose |
 |------|---------|
-| `index.html` | Home / landing |
-| `quote.html` | Smart Quote (style baseline) |
+| `index.html` | Home / landing + contact |
+| `services/*.html` | Service detail pages |
 | `css/styles.css` | Shared design system |
-| `js/site.js` | Mailto form helper |
-| `apex-ground-works.md` | Company + web system notes |
+| `js/site.js` | Mailto form + gallery lightbox |
+| `README.md` | Local preview + deploy |
+| `docs/FUTURE.md` | Deferred Smart Quote / admin / backend |

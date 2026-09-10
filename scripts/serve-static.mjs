@@ -42,6 +42,6 @@ createServer(async (req, res) => {
     res.writeHead(404);
     res.end("Not found");
   }
-}).listen(port, () => {
-  console.log(`Serving http://127.0.0.1:${port}`);
+}).listen(port, "0.0.0.0", () => {
+  console.log(`Serving http://0.0.0.0:${port}`);
 });
