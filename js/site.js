@@ -1017,8 +1017,15 @@
     });
   }
 
-  var loopCorner = document.querySelector(".landing-loop-video__media");
+  var loopCorner =
+    document.querySelector(".hero-proof__video") ||
+    document.querySelector(".landing-loop-video__media");
   if (loopCorner && typeof loopCorner.play === "function") {
-    loopCorner.play().catch(function () {});
+    var reduceMotion =
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!reduceMotion) {
+      loopCorner.play().catch(function () {});
+    }
   }
 })();
