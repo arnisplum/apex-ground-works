@@ -1,471 +1,258 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="Apex Ground Works — warm, precise residential groundwork: drainage, excavation, retaining walls, and small civil work you can trust."
+      content="Apex Ground Works provides precise excavation, drainage, site preparation and light civil work across the Lower Mainland."
     />
-    <title>Apex Ground Works | Groundwork for homes &amp; small projects</title>
+    <title>Apex Ground Works | Excavation & Civil Works</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="css/styles.css" />
-    <link
-      rel="preload"
-      as="image"
-      href="media/images/web/IMG_2836.webp"
-      type="image/webp"
-    />
+    <link rel="stylesheet" href="css/marketing-v2.css" />
+    <link rel="preload" as="image" href="media/images/web/IMG_2836.webp" type="image/webp" />
   </head>
-  <body
-    data-quote-submit-url="https://sdbedmwqhbntxhbxqwcb.supabase.co/functions/v1/submit-smart-quote"
-  >
-    <a class="skip-link" href="#main">Skip to content</a>
-
+  <body>
     <header class="site-header">
-      <div class="header-inner">
-        <a class="logo" href="index.html" aria-label="Apex Ground Works — home">
-          <picture>
-            <img
-              src="media/Logo/Asociation%20logos/Apex%20logo%20ap1.png"
-              alt=""
-              width="1024"
-              height="341"
-              decoding="async"
-            />
-          </picture>
-        </a>
-        <nav class="nav" aria-label="Primary">
-          <a href="#services">Services</a>
-          <a href="#trust">Trust</a>
-          <a href="#projects">Projects</a>
-          <a href="quote.html">Smart quote</a>
-          <a class="btn btn-primary" href="quote.html">Get a quote</a>
+      <div class="shell">
+        <nav class="navbar" aria-label="Primary navigation">
+          <a class="brand" href="#top" aria-label="Apex Ground Works home">
+            <img src="media/Logo/Asociation%20logos/Apex%20logo%20ap1.png" alt="Apex Ground Works" />
+          </a>
+          <div class="nav-links">
+            <a href="#services">Services</a>
+            <a href="#projects">Projects</a>
+            <a href="#process">Process</a>
+            <a href="#about">About</a>
+          </div>
+          <a class="nav-cta" href="#contact">Request estimate</a>
         </nav>
       </div>
     </header>
 
-    <main id="main">
-      <section class="hero" aria-labelledby="hero-heading">
-        <div class="hero__backdrop" aria-hidden="true">
+    <main id="top">
+      <section class="hero">
+        <div class="hero-media" aria-hidden="true">
           <picture>
             <source srcset="media/images/web/IMG_2836.webp" type="image/webp" />
-            <img
-              class="hero__photo"
-              src="media/images/web/IMG_2836.jpg"
-              alt="Compact excavator on a residential groundwork site with blue sky"
-              width="1920"
-              height="1440"
-              loading="eager"
-              fetchpriority="high"
-              decoding="async"
-            />
+            <img src="media/images/web/IMG_2836.jpg" alt="" fetchpriority="high" />
           </picture>
-          <div class="hero__scrim"></div>
         </div>
-        <div class="hero__inner">
-          <div class="hero-copy">
-            <p class="eyebrow eyebrow--on-hero">Residential groundwork</p>
-            <h1 id="hero-heading">Residential groundwork, handled with care.</h1>
-            <p class="lead">
-              Drainage, excavation, retaining wall prep, and light civil work for homeowners
-              and builders who need the site left clean, clear, and ready for the next step.
+        <div class="shell hero-content">
+          <div>
+            <div class="kicker">Lower Mainland, BC</div>
+            <h1>Groundwork.<br />Done properly.</h1>
+          </div>
+          <div>
+            <p class="hero-copy">
+              Precision excavation, drainage, site preparation and light civil work for homes,
+              builders and small commercial projects.
             </p>
             <div class="hero-actions">
-              <a class="btn btn-primary" href="quote.html">Start a quote</a>
-              <a class="btn btn-secondary" href="#services">Browse services</a>
-            </div>
-            <ul class="hero-checklist">
-              <li>
-                <span class="hero-checklist__icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path
-                      d="M20 6L9 17l-5-5"
-                      stroke="currentColor"
-                      stroke-width="2.25"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                  </svg>
-                </span>
-                Licensed &amp; insured
-              </li>
-              <li>
-                <span class="hero-checklist__icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path
-                      d="M20 6L9 17l-5-5"
-                      stroke="currentColor"
-                      stroke-width="2.25"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                  </svg>
-                </span>
-                Clean, respectful job sites
-              </li>
-              <li>
-                <span class="hero-checklist__icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path
-                      d="M20 6L9 17l-5-5"
-                      stroke="currentColor"
-                      stroke-width="2.25"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                  </svg>
-                </span>
-                Clear pricing &amp; communication
-              </li>
-            </ul>
-          </div>
-          <aside class="hero-proof" aria-label="Apex Ground Works project fit">
-            <p class="hero-proof__label">Best fit</p>
-            <h2>Smaller exterior jobs where the details matter.</h2>
-            <div class="hero-proof__grid">
-              <div>
-                <span>01</span>
-                Tight access and residential yards
-              </div>
-              <div>
-                <span>02</span>
-                Drainage, trenching, prep, and backfill
-              </div>
-              <div>
-                <span>03</span>
-                Clear scope before equipment arrives
-              </div>
-            </div>
-            <a class="hero-proof__link" href="quote.html">Tell us what you are planning</a>
-          </aside>
-        </div>
-      </section>
-
-      <section class="site-brief" aria-label="Apex Ground Works highlights">
-        <div class="site-brief__inner">
-          <p><strong>Based in the Lower Mainland</strong><span>Residential and light commercial support</span></p>
-          <p><strong>Right-sized equipment</strong><span>Careful work around existing homes</span></p>
-          <p><strong>Organized handoff</strong><span>Clear notes for owners, builders, and trades</span></p>
-        </div>
-      </section>
-
-      <section class="section section-alt" id="trust" aria-labelledby="trust-heading">
-        <div class="trust-section">
-          <div class="trust-section__main">
-            <p class="eyebrow">Trust</p>
-            <h2 id="trust-heading">Why homeowners call us</h2>
-            <p class="section-intro">
-              We stay in our lane: smaller exterior projects where details matter. You get
-              steady communication and workmanship that respects your property.
-            </p>
-            <ul class="trust-logos" aria-label="Industry affiliations">
-              <li class="trust-logos__item">
-                <img
-                  src="media/Logo/Asociation%20logos/ICBA.webp"
-                  alt="Independent Contractors and Businesses Association"
-                  width="180"
-                  height="100"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </li>
-              <li class="trust-logos__item trust-logos__item--wide">
-                <img
-                  src="media/Logo/Asociation%20logos/worksafebc_logo.jpg"
-                  alt="WorkSafeBC"
-                  width="200"
-                  height="48"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </li>
-              <li class="trust-logos__item">
-                <img
-                  src="media/Logo/Asociation%20logos/logo%20BC%20Housing.svg"
-                  alt="BC Housing"
-                  width="160"
-                  height="48"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </li>
-              <li class="trust-logos__item">
-                <img
-                  src="media/Logo/Asociation%20logos/pac-logo.svg"
-                  alt="Industry partner association"
-                  width="120"
-                  height="48"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      <section class="section" id="services" aria-labelledby="services-heading">
-        <p class="eyebrow">Services</p>
-        <h2 id="services-heading">What we can help with</h2>
-        <p class="section-intro">
-          Every site is a little different. If you do not see your job listed, ask — we
-          often tailor scope around your plans.
-        </p>
-        <div class="services-grid">
-          <a
-            class="service-card"
-            href="services/excavation.html"
-            style="--service-image: url('../media/images/web/IMG_2832.webp')"
-          >
-            <span class="service-card__name">Excavation</span>
-          </a>
-          <a
-            class="service-card"
-            href="services/civil-works.html"
-            style="--service-image: url('../media/images/web/IMG_3160.webp')"
-          >
-            <span class="service-card__name">Civil works &amp; utilities</span>
-          </a>
-          <a
-            class="service-card"
-            href="services/drain-tile.html"
-            style="--service-image: url('../media/images/web/IMG_3034.webp')"
-          >
-            <span class="service-card__name">Drain tile</span>
-          </a>
-          <a
-            class="service-card"
-            href="services/dampproofing.html"
-            style="--service-image: url('../media/images/web/IMG_3160.webp')"
-          >
-            <span class="service-card__name">Dampproofing</span>
-          </a>
-          <a
-            class="service-card"
-            href="services/sumps-pumps.html"
-            style="--service-image: url('../media/images/web/IMG_8520.webp')"
-          >
-            <span class="service-card__name">Sumps, pumps &amp; septic</span>
-          </a>
-          <a
-            class="service-card"
-            href="services/retaining-walls.html"
-            style="--service-image: url('../media/images/web/IMG_1209.webp')"
-          >
-            <span class="service-card__name">Hardscaping</span>
-          </a>
-        </div>
-
-        <div class="detail-card">
-          <p class="eyebrow">Scope notes</p>
-          <h2 class="visually-hidden" id="services-detail-heading">More typical scope</h2>
-          <p class="section-intro" style="margin-bottom: 1.5rem">
-            Residential and light commercial work we support often includes:
-          </p>
-          <div class="lists-two">
-            <div class="list-block">
-              <h3>At home</h3>
-              <ul>
-                <li>Drain tile and dampproofing</li>
-                <li>Small excavation and trenching</li>
-                <li>Retaining wall groundwork</li>
-                <li>Landscape prep and grading</li>
-                <li>Foundation exterior work</li>
-                <li>Sump excavation and support</li>
-              </ul>
-            </div>
-            <div class="list-block">
-              <h3>Light commercial</h3>
-              <ul>
-                <li>Sump installation support</li>
-                <li>Electrical conduit trenching</li>
-                <li>Civil service connections</li>
-                <li>Small site preparation</li>
-                <li>Limited commercial groundwork</li>
-                <li>Utility and drainage precision</li>
-              </ul>
+              <a class="btn btn-primary" href="#contact">Request an estimate <span>→</span></a>
+              <a class="btn btn-ghost" href="#projects">View our work</a>
             </div>
           </div>
         </div>
       </section>
 
-      <section class="section process-section" aria-labelledby="process-heading">
-        <div class="process-header">
-          <p class="eyebrow">How it runs</p>
-          <h2 id="process-heading">A steady process before the first bucket moves</h2>
-          <p class="section-intro">
-            Good groundwork is mostly preparation: understanding water, access, utilities,
-            disposal, and what the next trade needs from the site.
-          </p>
-        </div>
-        <div class="process-steps">
-          <article class="process-step">
-            <span>01</span>
-            <h3>Review the site</h3>
-            <p>Photos, access notes, drawings, and site constraints help us understand the work before quoting.</p>
-          </article>
-          <article class="process-step">
-            <span>02</span>
-            <h3>Confirm the scope</h3>
-            <p>We define what is included, what needs coordination, and what should be ready before arrival.</p>
-          </article>
-          <article class="process-step">
-            <span>03</span>
-            <h3>Leave it ready</h3>
-            <p>The goal is a clean, sensible handoff for drainage, walls, landscaping, utilities, or the next trade.</p>
-          </article>
+      <section class="stats" aria-label="Apex Ground Works highlights">
+        <div class="shell stats-grid">
+          <div class="stat">
+            <strong>Residential + light civil</strong>
+            <span>Right-sized scope and equipment</span>
+          </div>
+          <div class="stat">
+            <strong>Lower Mainland</strong>
+            <span>Local site work and coordination</span>
+          </div>
+          <div class="stat">
+            <strong>Clean handoff</strong>
+            <span>Built around the next trade and finished result</span>
+          </div>
         </div>
       </section>
 
-      <section class="section section-surface" id="projects" aria-labelledby="projects-heading">
-        <p class="eyebrow">Projects</p>
-        <h2 id="projects-heading">On recent sites</h2>
-        <p class="section-intro">
-          Real trenches, real backfill, real weather. A calm gallery of the craft we bring
-          to your yard.
-        </p>
-        <div class="gallery-scale-wrap">
-          <div class="gallery-grid">
-            <button
-              type="button"
-              class="gallery-item"
-              data-lightbox-webp="media/images/web/IMG_1209.webp"
-              data-lightbox-jpg="media/images/web/IMG_1209.jpg"
-              data-lightbox-alt="Groundwork project"
-              aria-label="Enlarge: Groundwork project"
-            >
-              <picture>
-                <source srcset="media/images/web/IMG_1209.webp" type="image/webp" />
-                <img src="media/images/web/IMG_1209.jpg" alt="" loading="lazy" width="400" height="267" />
-              </picture>
-            </button>
-            <button
-              type="button"
-              class="gallery-item"
-              data-lightbox-webp="media/images/web/IMG_2832.webp"
-              data-lightbox-jpg="media/images/web/IMG_2832.jpg"
-              data-lightbox-alt="Excavation and site work"
-              aria-label="Enlarge: Excavation and site work"
-            >
-              <picture>
-                <source srcset="media/images/web/IMG_2832.webp" type="image/webp" />
-                <img src="media/images/web/IMG_2832.jpg" alt="" loading="lazy" width="400" height="267" />
-              </picture>
-            </button>
-            <button
-              type="button"
-              class="gallery-item"
-              data-lightbox-webp="media/images/web/IMG_3034.webp"
-              data-lightbox-jpg="media/images/web/IMG_3034.jpg"
-              data-lightbox-alt="Drainage groundwork"
-              aria-label="Enlarge: Drainage groundwork"
-            >
-              <picture>
-                <source srcset="media/images/web/IMG_3034.webp" type="image/webp" />
-                <img src="media/images/web/IMG_3034.jpg" alt="" loading="lazy" width="400" height="267" />
-              </picture>
-            </button>
-            <button
-              type="button"
-              class="gallery-item"
-              data-lightbox-webp="media/images/web/IMG_3155.webp"
-              data-lightbox-jpg="media/images/web/IMG_3155.jpg"
-              data-lightbox-alt="Residential site preparation"
-              aria-label="Enlarge: Residential site preparation"
-            >
-              <picture>
-                <source srcset="media/images/web/IMG_3155.webp" type="image/webp" />
-                <img src="media/images/web/IMG_3155.jpg" alt="" loading="lazy" width="400" height="267" />
-              </picture>
-            </button>
-            <button
-              type="button"
-              class="gallery-item"
-              data-lightbox-webp="media/images/web/IMG_3160.webp"
-              data-lightbox-jpg="media/images/web/IMG_3160.jpg"
-              data-lightbox-alt="Trenching project"
-              aria-label="Enlarge: Trenching project"
-            >
+      <section class="section services" id="services">
+        <div class="shell">
+          <div class="section-head">
+            <div class="section-label">Capabilities</div>
+            <div>
+              <h2>Small civil work with serious standards.</h2>
+              <p class="section-intro">
+                We focus on the part of the job that has to be right before everything else can move forward:
+                access, excavation, drainage, utilities, grades and preparation.
+              </p>
+            </div>
+          </div>
+
+          <div class="service-list">
+            <div class="service-row">
+              <span class="service-num">01</span>
+              <h3>Excavation</h3>
+              <p>Residential digs, trenching, removals, tight-access work and careful material handling.</p>
+              <span class="service-arrow">↗</span>
+            </div>
+            <div class="service-row">
+              <span class="service-num">02</span>
+              <h3>Civil works</h3>
+              <p>Small service connections, conduit runs, coordinated trenching and site infrastructure.</p>
+              <span class="service-arrow">↗</span>
+            </div>
+            <div class="service-row">
+              <span class="service-num">03</span>
+              <h3>Drainage</h3>
+              <p>Drain tile, foundation drainage, sump excavation and practical water-management groundwork.</p>
+              <span class="service-arrow">↗</span>
+            </div>
+            <div class="service-row">
+              <span class="service-num">04</span>
+              <h3>Site preparation</h3>
+              <p>Grading, base preparation, backfill and groundwork ready for concrete, landscape or construction.</p>
+              <span class="service-arrow">↗</span>
+            </div>
+            <div class="service-row">
+              <span class="service-num">05</span>
+              <h3>Retaining + hardscape prep</h3>
+              <p>Excavation, subgrade and base work for retaining walls, patios, walkways and exterior improvements.</p>
+              <span class="service-arrow">↗</span>
+            </div>
+            <div class="service-row">
+              <span class="service-num">06</span>
+              <h3>Utility trenching</h3>
+              <p>Organized trenches and service routes for electrical, drainage and other site utilities.</p>
+              <span class="service-arrow">↗</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="feature" id="about">
+        <div class="shell">
+          <div class="feature-card">
+            <div class="feature-media">
               <picture>
                 <source srcset="media/images/web/IMG_3160.webp" type="image/webp" />
-                <img src="media/images/web/IMG_3160.jpg" alt="" loading="lazy" width="400" height="267" />
+                <img src="media/images/web/IMG_3160.jpg" alt="Apex Ground Works excavation project" loading="lazy" />
               </picture>
-            </button>
-            <button
-              type="button"
-              class="gallery-item"
-              data-lightbox-webp="media/images/web/IMG_8520.webp"
-              data-lightbox-jpg="media/images/web/IMG_8520.jpg"
-              data-lightbox-alt="Groundwork detail"
-              aria-label="Enlarge: Groundwork detail"
-            >
-              <picture>
-                <source srcset="media/images/web/IMG_8520.webp" type="image/webp" />
-                <img src="media/images/web/IMG_8520.jpg" alt="" loading="lazy" width="400" height="267" />
-              </picture>
-            </button>
-            <button
-              type="button"
-              class="gallery-item"
-              data-lightbox-webp="media/images/web/IMG_8651.webp"
-              data-lightbox-jpg="media/images/web/IMG_8651.jpg"
-              data-lightbox-alt="Exterior civil work"
-              aria-label="Enlarge: Exterior civil work"
-            >
-              <picture>
-                <source srcset="media/images/web/IMG_8651.webp" type="image/webp" />
-                <img src="media/images/web/IMG_8651.jpg" alt="" loading="lazy" width="400" height="267" />
-              </picture>
-            </button>
-            <button
-              type="button"
-              class="gallery-item"
-              data-lightbox-webp="media/images/web/IMG_9257.webp"
-              data-lightbox-jpg="media/images/web/IMG_9257.jpg"
-              data-lightbox-alt="Project site overview"
-              aria-label="Enlarge: Project site overview"
-            >
-              <picture>
-                <source srcset="media/images/web/IMG_9257.webp" type="image/webp" />
-                <img src="media/images/web/IMG_9257.jpg" alt="" loading="lazy" width="400" height="267" />
-              </picture>
-            </button>
+            </div>
+            <div class="feature-copy">
+              <div>
+                <div class="kicker">How we work</div>
+                <h2>Precise where it matters.</h2>
+                <p>
+                  Apex is built for residential and small civil projects where access is tighter,
+                  coordination matters and the site still needs to look like someone cared when the machine leaves.
+                </p>
+              </div>
+              <div class="feature-points">
+                <div class="feature-point"><strong>Clear scope</strong><span>before mobilization</span></div>
+                <div class="feature-point"><strong>Right-sized equipment</strong><span>for the actual site</span></div>
+                <div class="feature-point"><strong>Organized work</strong><span>for owners + trades</span></div>
+                <div class="feature-point"><strong>Clean finish</strong><span>ready for the next step</span></div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <div
-        id="gallery-lightbox"
-        class="lightbox"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Enlarged project photo"
-        hidden
-      >
-        <div class="lightbox__panel">
-          <button type="button" class="lightbox__close" aria-label="Close">×</button>
-          <picture>
-            <source id="lightbox-webp" srcset="" type="image/webp" />
-            <img id="lightbox-img" class="lightbox__img" src="" alt="" width="1200" height="800" />
-          </picture>
-        </div>
-      </div>
+      <section class="section projects" id="projects">
+        <div class="shell">
+          <div class="section-head">
+            <div class="section-label">Selected work</div>
+            <div>
+              <h2>Real sites. Real conditions.</h2>
+              <p class="section-intro">
+                The best explanation of groundwork is the work itself — excavation, drainage and prep delivered cleanly in real residential conditions.
+              </p>
+            </div>
+          </div>
 
+          <div class="project-grid">
+            <div class="project project-large">
+              <picture>
+                <source srcset="media/images/web/IMG_3034.webp" type="image/webp" />
+                <img src="media/images/web/IMG_3034.jpg" alt="Residential drainage and excavation project" loading="lazy" />
+              </picture>
+              <span class="project-tag">Drainage + excavation</span>
+            </div>
+            <div class="project-stack">
+              <div class="project">
+                <picture>
+                  <source srcset="media/images/web/IMG_1209.webp" type="image/webp" />
+                  <img src="media/images/web/IMG_1209.jpg" alt="Groundwork and retaining preparation" loading="lazy" />
+                </picture>
+                <span class="project-tag">Site preparation</span>
+              </div>
+              <div class="project">
+                <picture>
+                  <source srcset="media/images/web/IMG_3155.webp" type="image/webp" />
+                  <img src="media/images/web/IMG_3155.jpg" alt="Residential excavation work" loading="lazy" />
+                </picture>
+                <span class="project-tag">Residential excavation</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="process">
+        <div class="shell">
+          <div class="section-head">
+            <div class="section-label">Process</div>
+            <div>
+              <h2>Simple from first look to final grade.</h2>
+            </div>
+          </div>
+          <div class="process-grid">
+            <article class="step">
+              <span class="step-num">01 / Review</span>
+              <h3>Understand the site</h3>
+              <p>We start with the location, access, photos, drawings and the actual result you need.</p>
+            </article>
+            <article class="step">
+              <span class="step-num">02 / Plan</span>
+              <h3>Define the work</h3>
+              <p>Scope, materials, disposal, utilities and coordination are clarified before the machine arrives.</p>
+            </article>
+            <article class="step">
+              <span class="step-num">03 / Execute</span>
+              <h3>Leave it ready</h3>
+              <p>We complete the groundwork with the next construction step and finished site in mind.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="contact" id="contact">
+        <div class="shell">
+          <div class="contact-card">
+            <div>
+              <div class="kicker">Start a project</div>
+              <h2>Have groundwork coming up?</h2>
+            </div>
+            <div>
+              <p>
+                Our estimate request experience is being refreshed. The existing Apex quote system is preserved and will return here when the new site is ready for launch.
+              </p>
+              <span class="btn" aria-disabled="true">Estimate portal — coming soon</span>
+              <p class="contact-note">Apex Ground Works · Lower Mainland, British Columbia</p>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
 
-    <footer class="site-footer">
-      <p>
-        <strong>Apex Ground Works</strong> — groundwork for homes and small civil projects.
-        <a href="quote.html">Smart Quote</a>
-      </p>
+    <footer class="footer">
+      <div class="shell footer-row">
+        <span>© 2026 Apex Ground Works</span>
+        <span>Excavation · Drainage · Civil works · Site preparation</span>
+      </div>
     </footer>
-
-    <script src="js/site.js" defer></script>
   </body>
 </html>
